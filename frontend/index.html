@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VADEXSA LOGISTIC — Sistema de Gestión de Transporte y Liquidaciones</title>
+  
+  <!-- Iconos y Tipografía -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  
+  <!-- Hoja de Estilos Empresarial -->
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="app-layout">
+    
+    <!-- SIDEBAR LATERAL IZQUIERDO -->
+    <aside class="tms-sidebar">
+      
+      <!-- Cabecera del Sidebar con Logo -->
+      <div class="sidebar-header">
+        <img src="../assets/img/logo.png" alt="VADEXSA Logo" class="sidebar-logo">
+        <div>
+          <div class="sidebar-brand-text">VADEXSA LOGISTIC</div>
+          <div class="sidebar-brand-sub">TMS & ERP Enterprise</div>
+        </div>
+      </div>
+
+      <!-- Perfil de Usuario -->
+      <div class="sidebar-user-box">
+        <div class="sidebar-user-avatar" id="sidebar-user-avatar">A</div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name" id="sidebar-user-name">Administrador</span>
+          <span class="sidebar-user-role" id="sidebar-user-role">SISTEMA</span>
+        </div>
+      </div>
+
+      <!-- Widget Tipo de Cambio (exacto al diseño de la imagen) -->
+      <div class="sidebar-exchange-widget">
+        <div class="exchange-title">
+          <i class="bi bi-currency-exchange text-info"></i> Tipo de Cambio
+        </div>
+        <div class="exchange-row">
+          <span>Fecha:</span>
+          <span id="widget-exchange-date" style="font-weight:600; color:#fff;">--/--/----</span>
+        </div>
+        <div class="exchange-row">
+          <span>Compra:</span>
+          <span class="exchange-val">3.426</span>
+        </div>
+        <div class="exchange-row">
+          <span>Venta:</span>
+          <span class="exchange-val">3.435</span>
+        </div>
+      </div>
+
+      <!-- Navegación del Menú -->
+      <nav class="sidebar-nav">
+        
+        <div class="nav-category">Principal</div>
+        <a href="#dashboard" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+          </div>
+        </a>
+
+        <div class="nav-category">Operaciones</div>
+        <a href="#servicios" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-truck"></i>
+            <span>Servicios y Liquidación</span>
+          </div>
+        </a>
+
+        <a href="#programacion" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-calendar-check"></i>
+            <span>Programación Diaria</span>
+          </div>
+        </a>
+
+        <div class="nav-category">Catálogos & Flota</div>
+        <a href="#clientes" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-people"></i>
+            <span>Clientes</span>
+          </div>
+        </a>
+
+        <a href="#vehiculos" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-truck-flatbed"></i>
+            <span>Vehículos / Flota</span>
+          </div>
+        </a>
+
+        <a href="#conductores" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-person-badge"></i>
+            <span>Conductores</span>
+          </div>
+        </a>
+
+        <a href="#proveedores" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-box-seam"></i>
+            <span>Proveedores</span>
+          </div>
+        </a>
+
+        <div class="nav-category">Finanzas & Gastos</div>
+        <a href="#gastos-operativos" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-fuel-pump"></i>
+            <span>Gastos Operativos</span>
+          </div>
+        </a>
+
+        <a href="#gastos-admin" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-building"></i>
+            <span>Gastos Administrativos</span>
+          </div>
+        </a>
+
+        <a href="#reportes" class="nav-item">
+          <div class="nav-item-left">
+            <i class="bi bi-file-earmark-bar-graph"></i>
+            <span>Centro de Reportes</span>
+          </div>
+        </a>
+
+        <div class="nav-category">Cuenta</div>
+        <a href="#logout" class="nav-item" style="color: #f87171;">
+          <div class="nav-item-left">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Cerrar Sesión</span>
+          </div>
+        </a>
+
+      </nav>
+
+    </aside>
+
+    <!-- WRAPPER PRINCIPAL -->
+    <div class="tms-main-wrapper">
+      
+      <!-- TOPBAR SUPERIOR -->
+      <header class="tms-topbar">
+        <div class="topbar-left">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Alternar menú">
+            <i class="bi bi-list"></i>
+          </button>
+          <div class="topbar-company-title">
+            <i class="bi bi-building-check text-primary"></i>
+            <span>RUC: 20604629293 - VADEXSA LOGISTIC S.A.C.</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="badge-venta">
+            <i class="bi bi-arrow-up-right-circle text-success"></i> VENTA: <strong>3.435</strong>
+          </div>
+          <div class="topbar-user-badge">
+            <i class="bi bi-person-circle text-primary" style="font-size: 16px;"></i>
+            <span id="topbar-user-name">SOPORTE</span>
+          </div>
+          <a href="#logout" class="btn-tms btn-tms-default" title="Cerrar sesión" style="padding: 4px 8px;">
+            <i class="bi bi-power text-danger"></i>
+          </a>
+        </div>
+      </header>
+
+      <!-- CANVAS DE CONTENIDO DINÁMICO -->
+      <main class="tms-content">
+        <div id="tms-content-container">
+          <!-- Renderizado dinámico vía router.js -->
+        </div>
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- CHATBOT ASISTENTE FLOTANTE -->
+  <div class="tms-chat-fab" id="tms-chat-fab" title="Asistente Virtual Vadexsa">
+    <i class="bi bi-chat-dots-fill"></i>
+  </div>
+
+  <div class="tms-chat-panel" id="tms-chat-panel">
+    <div class="chat-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-robot"></i>
+        <span>Asistente Inteligente VADEXSA</span>
+      </div>
+      <button id="chat-close-btn" style="background: none; border: none; color: #fff; font-size: 18px; cursor: pointer;">&times;</button>
+    </div>
+
+    <div style="padding: 8px 12px; background: #eff6ff; border-bottom: 1px solid #dbeafe; display: flex; gap: 6px; overflow-x: auto;">
+      <button class="btn-pill-action chat-quick-chip" data-query="servicios de hoy" style="background: #3b82f6; font-size: 10px;">📅 Hoy</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="facturacion del mes" style="background: #10b981; font-size: 10px;">💰 Facturación</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="conductores disponibles hoy" style="background: #8b5cf6; font-size: 10px;">🧑‍✈️ Conductores</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="gastos del mes" style="background: #f59e0b; font-size: 10px;">⛽ Gastos</button>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <!-- Mensajes dinámicos -->
+    </div>
+
+    <form class="chat-input-row" id="chat-form">
+      <input type="text" id="chat-input" class="form-control-tms" placeholder="Pregunta sobre servicios, gastos, etc..." autocomplete="off">
+      <button type="submit" class="btn-tms btn-tms-primary" style="padding: 6px 12px;">
+        <i class="bi bi-send-fill"></i>
+      </button>
+    </form>
+  </div>
+
+  <!-- Contenedor de notificaciones Toast -->
+  <div id="toast-container"></div>
+
+  <!-- Scripts de la aplicación -->
+  <script type="module">
+    import { initRouter } from './js/router.js';
+
+    // Formatear fecha actual en el widget de Tipo de Cambio
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    const dateEl = document.getElementById('widget-exchange-date');
+    if (dateEl) dateEl.textContent = `${dd}/${mm}/${yyyy}`;
+
+    // Inicializar SPA Router
+    document.addEventListener('DOMContentLoaded', () => {
+      initRouter();
+    });
+  </script>
+
+</body>
+</html>

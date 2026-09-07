@@ -1,34 +1,81 @@
 <?php
+// dashboard/index.php - Métricas y KPIs del sistema
+require_once __DIR__ . "/../config/conexion.php";
+require_auth();
+
+$mes = isset($_GET['mes']) && !empty($_GET['mes']) ? str_pad((int)$_GET['mes'], 2, "0", STR_PAD_LEFT) : date("m");
+$anio = isset($_GET['anio']) && !empty($_GET['anio']) ? (int)$_GET['anio'] : (int)date("Y");
+
+// 1. Total servicios del mes
+$sql = "SELECT COUNT(*) as total FROM servicios WHERE MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
+$res = mysqli_query($conn, $sql);
+$row = mysqli_fetch_assoc($res);
+$servicios_mes = (int)($row['total'] ?? 0);
+
+// 2. Facturación del mes
+$sql = "SELECT IFNULL(SUM(precio_cliente), 0) as total FROM servicios WHERE MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
+$res = mysqli_query($conn, $sql);
+$row = mysqli_fetch_assoc($res);
+$facturacion = (float)($row['total'] ?? 0);
+
+// 3. IGV generado
+$sql = "SELECT IFNULL(SUM(precio_cliente - (precio_cliente / 1.18)), 0) as igv FROM servicios WHERE tipo_comprobante != 'SIN_COMPROBANTE' AND MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
+$res = mysqli_query($conn, $sql);
+$row = mysqli_fetch_assoc($res);
+$igv = (float)($row['igv'] ?? 0);
+
+// 4. Gastos operativos
+$sql = "SELECT IFNULL(SUM(monto), 0) as total FROM gastos_operativos WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'";
+$res = mysqli_query($conn, $sql);
+$row = mysqli_fetch_assoc($res);
+$gastos_operativos = (float)($row['total'] ?? 0);
+
+// 5. Gastos administrativos
+$sql = "SELECT IFNULL(SUM(monto), 0) as total FROM gastos_administrativos WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'";
+$res = mysqli_query($conn, $sql);
+$row = mysqli_fetch_assoc($res);
+$gastos_admin = (float)($row['total'] ?? 0);
+
+// 6. Utilidad neta
+$total_gastos = $gastos_operativos + $gastos_admin;
+$utilidad = $facturacion - $total_gastos;
+
+// 7. Servicios recientes (últimos 10)
+$sql_recientes = "SELECT s.*, c.nombre AS cliente, v.placa, co.nombre AS conductor
+                  FROM servicios s
+                  LEFT JOIN clientes c ON s.cliente_id = c.id
+                  LEFT JOIN vehiculos v ON s.vehiculo_id = v.id
+                  LEFT JOIN conductores co ON s.conductor_id = co.id
+                  ORDER BY s.fecha_servicio DESC, s.id DESC
+                  LIMIT 10";
+$res_recientes = mysqli_query($conn, $sql_recientes);
+$servicios_recientes = [];
+while ($sr = mysqli_fetch_assoc($res_recientes)) {
+    $servicios_recientes[] = $sr;
+}
+
+// Si la petición es JSON / API
+if (isset($_GET['json']) || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
+    json_response([
+        "success" => true,
+        "data" => [
+            "mes" => (int)$mes,
+            "anio" => (int)$anio,
+            "servicios_mes" => $servicios_mes,
+            "facturacion" => $facturacion,
+            "igv" => $igv,
+            "gastos_operativos" => $gastos_operativos,
+            "gastos_admin" => $gastos_admin,
+            "total_gastos" => $total_gastos,
+            "utilidad" => $utilidad,
+            "servicios_recientes" => $servicios_recientes
+        ]
+    ]);
+}
+
 include("../layout/header.php");
 include("../layout/sidebar.php");
-include("../config/conexion.php");
-
-$mes=date("m");
-$anio=date("Y");
-
-$sql="SELECT COUNT(*) as total FROM servicios WHERE MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
-$res=mysqli_query($conn,$sql); $row=mysqli_fetch_assoc($res);
-$servicios_mes=$row['total'];
-
-$sql="SELECT IFNULL(SUM(precio_cliente),0) as total FROM servicios WHERE MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
-$res=mysqli_query($conn,$sql); $row=mysqli_fetch_assoc($res);
-$facturacion=$row['total'];
-
-$sql="SELECT IFNULL(SUM(precio_cliente-(precio_cliente/1.18)),0) as igv FROM servicios WHERE tipo_comprobante!='SIN_COMPROBANTE' AND MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
-$res=mysqli_query($conn,$sql); $row=mysqli_fetch_assoc($res);
-$igv=$row['igv'];
-
-$sql="SELECT IFNULL(SUM(monto),0) as total FROM gastos_operativos WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'";
-$res=mysqli_query($conn,$sql); $row=mysqli_fetch_assoc($res);
-$gastos_operativos=$row['total'];
-
-$sql="SELECT IFNULL(SUM(monto),0) as total FROM gastos_administrativos WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'";
-$res=mysqli_query($conn,$sql); $row=mysqli_fetch_assoc($res);
-$gastos_admin=$row['total'];
-
-$utilidad=$facturacion-($gastos_operativos+$gastos_admin);
 ?>
-
 <div class="content">
 <h3 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard - VADEXSA LOGISTIC</h3>
 <div class="row">

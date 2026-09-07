@@ -1,22 +1,35 @@
 <?php
+// gastos_operativos/guardar.php - Registrar gasto operativo
+require_once __DIR__ . "/../config/conexion.php";
+require_auth();
 
-include("../config/conexion.php");
+$data = get_request_data();
 
-$fecha=$_POST['fecha'];
-$vehiculo=$_POST['vehiculo_id'];
-$tipo=$_POST['tipo_gasto'];
-$descripcion=$_POST['descripcion'];
-$monto=$_POST['monto'];
+$fecha = mysqli_real_escape_string($conn, trim($data['fecha'] ?? date('Y-m-d')));
+$vehiculo_id = (int)($data['vehiculo_id'] ?? 0);
+$tipo = mysqli_real_escape_string($conn, trim($data['tipo'] ?? 'Combustible'));
+$descripcion = mysqli_real_escape_string($conn, trim($data['descripcion'] ?? ''));
+$monto = floatval($data['monto'] ?? 0);
 
-$sql="INSERT INTO gastos_operativos
-(vehiculo_id,tipo_gasto,descripcion,monto,fecha)
+if (!$vehiculo_id || $monto <= 0) {
+    json_response(["success" => false, "error" => "El vehículo y un monto válido son obligatorios."], 400);
+}
 
-VALUES
+$sql = "INSERT INTO gastos_operativos (fecha, vehiculo_id, tipo, descripcion, monto)
+        VALUES ('$fecha', '$vehiculo_id', '$tipo', '$descripcion', '$monto')";
 
-('$vehiculo','$tipo','$descripcion','$monto','$fecha')";
-
-mysqli_query($conn,$sql);
-
-header("Location:index.php");
-
+if (mysqli_query($conn, $sql)) {
+    $nuevo_id = mysqli_insert_id($conn);
+    if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || !empty($data)) {
+        json_response([
+            "success" => true,
+            "message" => "Gasto operativo registrado correctamente.",
+            "id" => $nuevo_id
+        ], 201);
+    }
+    header("Location: index.php");
+    exit;
+} else {
+    json_response(["success" => false, "error" => "Error al registrar gasto: " . mysqli_error($conn)], 500);
+}
 ?>

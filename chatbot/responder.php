@@ -1,163 +1,140 @@
 <?php
-session_start();
-require_once '../config/conexion.php';
+// chatbot/responder.php - Asistente virtual VADEXSA conectado a la base de datos
+require_once __DIR__ . "/../config/conexion.php";
+require_auth();
 
-// Solo permitir acceso si hay sesión activa
-if (!isset($_SESSION['usuario'])) {
-    echo json_encode(['respuesta' => 'Sesión no válida.']);
-    exit;
+$data = get_request_data();
+$pregunta = strtolower(trim($data['pregunta'] ?? $_POST['pregunta'] ?? ''));
+
+if (empty($pregunta)) {
+    json_response(["success" => false, "error" => "La pregunta no puede estar vacía."], 400);
 }
 
-$pregunta = strtolower(trim($_POST['pregunta'] ?? ''));
-echo json_encode(['respuesta' => responder($pregunta, $conn)]);
+json_response([
+    "success" => true,
+    "respuesta" => responder_pregunta($pregunta, $conn)
+]);
 
-// ─────────────────────────────────────────────
-function responder($p, $conn) {
-
-    // SALUDO
-    if (tiene($p, ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'saludos'])) {
-        return "¡Hola! Soy el asistente de VADEXSA 👋\n\nPuedo ayudarte con:\n• Servicios del día\n• Estado de un servicio (#ID)\n• Facturación del mes\n• Gastos del mes\n• Utilidad del mes\n• Conductores disponibles hoy\n• Cómo usar el sistema";
+function responder_pregunta($p, $conn) {
+    // 1. SALUDOS
+    if (tiene($p, ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'saludos', 'que tal'])) {
+        return "¡Hola! Soy el asistente inteligente de VADEXSA 🤖🚚\n\nPuedo ayudarte con:\n• Servicios del día\n• Estado de un servicio (#ID)\n• Facturación del mes\n• Gastos del mes\n• Utilidad del mes\n• Conductores disponibles hoy\n• Total de clientes y vehículos\n• Procesos del sistema";
     }
 
-    // SERVICIOS DE HOY
+    // 2. SERVICIOS DE HOY
     if (tiene($p, ['servicio hoy', 'servicios hoy', 'servicios de hoy', 'hay hoy', 'programados hoy', 'cuantos servicios'])) {
         $hoy = date('Y-m-d');
         $res = mysqli_query($conn,
-            "SELECT s.id, c.nombre AS cliente, s.hora_servicio, s.origen, s.destino, s.estado_servicio
+            "SELECT s.id, c.nombre AS cliente, s.hora_servicio, s.origen, s.destino, s.estado_servicio, v.placa
              FROM servicios s
-             JOIN clientes c ON s.cliente_id = c.id
+             LEFT JOIN clientes c ON s.cliente_id = c.id
+             LEFT JOIN vehiculos v ON s.vehiculo_id = v.id
              WHERE s.fecha_servicio = '$hoy'
-             ORDER BY s.hora_servicio");
+             ORDER BY s.hora_servicio ASC");
+        
         $total = mysqli_num_rows($res);
         if ($total == 0) return "No hay servicios programados para hoy (" . date('d/m/Y') . ").";
-        $txt = "Servicios de hoy — " . date('d/m/Y') . " ($total en total):\n\n";
+        
+        $txt = "📅 Servicios de hoy — " . date('d/m/Y') . " ($total en total):\n\n";
         while ($f = mysqli_fetch_assoc($res)) {
-            $txt .= "• #{$f['id']} {$f['cliente']}\n  {$f['hora_servicio']} | {$f['origen']} → {$f['destino']}\n  Estado: {$f['estado_servicio']}\n\n";
+            $cli = $f['cliente'] ?? 'Sin cliente';
+            $plc = $f['placa'] ? " [{$f['placa']}]" : "";
+            $txt .= "• #{$f['id']} - {$cli}{$plc}\n  Hora: {$f['hora_servicio']} | {$f['origen']} → {$f['destino']}\n  Estado: {$f['estado_servicio']}\n\n";
         }
         return trim($txt);
     }
 
-    // ESTADO DE UN SERVICIO POR ID
-    if (tiene($p, ['estado', 'servicio']) && preg_match('/#?(\d+)/', $p, $m)) {
+    // 3. ESTADO DE UN SERVICIO POR ID
+    if (tiene($p, ['estado', 'servicio', 'guia']) && preg_match('/#?(\d+)/', $p, $m)) {
         $id = (int)$m[1];
         $res = mysqli_query($conn,
-            "SELECT s.id, s.estado_servicio, s.fecha_servicio, s.hora_servicio,
-                    s.origen, s.destino, c.nombre AS cliente,
-                    CONCAT(con.nombre, ' ', con.apellido) AS conductor
+            "SELECT s.*, c.nombre AS cliente, v.placa, co.nombre AS conductor
              FROM servicios s
-             JOIN clientes c ON s.cliente_id = c.id
-             JOIN conductores con ON s.conductor_id = con.id
-             WHERE s.id = $id");
-        if (!$f = mysqli_fetch_assoc($res)) return "No encontré el servicio #$id.";
-        return "Servicio #{$f['id']}\n" .
-               "Cliente: {$f['cliente']}\n" .
-               "Fecha: {$f['fecha_servicio']} {$f['hora_servicio']}\n" .
-               "Ruta: {$f['origen']} → {$f['destino']}\n" .
-               "Conductor: {$f['conductor']}\n" .
-               "Estado: {$f['estado_servicio']}";
+             LEFT JOIN clientes c ON s.cliente_id = c.id
+             LEFT JOIN vehiculos v ON s.vehiculo_id = v.id
+             LEFT JOIN conductores co ON s.conductor_id = co.id
+             WHERE s.id = $id LIMIT 1");
+        
+        if (!$f = mysqli_fetch_assoc($res)) return "No encontré el servicio #$id en el sistema.";
+        
+        return "📦 Información del Servicio #{$f['id']}:\n\n" .
+               "• Cliente: " . ($f['cliente'] ?? 'No asignado') . "\n" .
+               "• Fecha: " . date('d/m/Y', strtotime($f['fecha_servicio'])) . " {$f['hora_servicio']}\n" .
+               "• Ruta: {$f['origen']} → {$f['destino']}\n" .
+               "• Vehículo: " . ($f['placa'] ?? 'No asignado') . "\n" .
+               "• Conductor: " . ($f['conductor'] ?? 'No asignado') . "\n" .
+               "• Guía Transportista: {$f['guia_transportista']}\n" .
+               "• Monto: S/ " . number_format($f['precio_cliente'], 2) . "\n" .
+               "• Estado: " . strtoupper($f['estado_servicio']);
     }
 
-    // FACTURACIÓN DEL MES
-    if (tiene($p, ['facturacion', 'facturación', 'ingresos', 'ventas del mes', 'cuanto facturamos', 'cuánto facturamos'])) {
-        $mes = date('Y-m');
-        $f = mysqli_fetch_assoc(mysqli_query($conn,
-            "SELECT COUNT(*) total, COALESCE(SUM(precio_cliente),0) monto
-             FROM servicios
-             WHERE DATE_FORMAT(fecha_servicio,'%Y-%m') = '$mes'"));
-        return "Facturación de " . date('F Y') . ":\n" .
-               "• Servicios: {$f['total']}\n" .
-               "• Total: S/ " . number_format($f['monto'], 2);
+    // 4. FACTURACIÓN DEL MES
+    if (tiene($p, ['facturacion', 'facturado', 'ingresos', 'ventas', 'cuanto se facturo', 'cuanto vendimos'])) {
+        $mes = date('m');
+        $anio = date('Y');
+        $res = mysqli_query($conn, "SELECT IFNULL(SUM(precio_cliente),0) AS total, COUNT(*) AS cant FROM servicios WHERE MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'");
+        $f = mysqli_fetch_assoc($res);
+        $total = number_format($f['total'], 2);
+        $meses = ['01'=>'Enero','02'=>'Febrero','03'=>'Marzo','04'=>'Abril','05'=>'Mayo','06'=>'Junio',
+                  '07'=>'Julio','08'=>'Agosto','09'=>'Septiembre','10'=>'Octubre','11'=>'Noviembre','12'=>'Diciembre'];
+        $nombreMes = $meses[$mes];
+        return "💰 Facturación de $nombreMes $anio:\n\n• Total facturado: S/ $total\n• Total de servicios realizados: {$f['cant']}";
     }
 
-    // GASTOS DEL MES
-    if (tiene($p, ['gasto', 'gastos', 'egresos', 'cuanto gastamos', 'cuánto gastamos'])) {
-        $mes = date('Y-m');
-        $op  = mysqli_fetch_assoc(mysqli_query($conn,
-            "SELECT COALESCE(SUM(monto),0) t FROM gastos_operativos WHERE DATE_FORMAT(fecha,'%Y-%m')='$mes'"));
-        $adm = mysqli_fetch_assoc(mysqli_query($conn,
-            "SELECT COALESCE(SUM(monto),0) t FROM gastos_administrativos WHERE DATE_FORMAT(fecha,'%Y-%m')='$mes'"));
-        $total = $op['t'] + $adm['t'];
-        return "Gastos de " . date('F Y') . ":\n" .
-               "• Operativos: S/ " . number_format($op['t'], 2) . "\n" .
-               "• Administrativos: S/ " . number_format($adm['t'], 2) . "\n" .
-               "• Total: S/ " . number_format($total, 2);
+    // 5. GASTOS DEL MES
+    if (tiene($p, ['gasto', 'gastos', 'egresos', 'cuanto se gasto'])) {
+        $mes = date('m');
+        $anio = date('Y');
+        $r1 = mysqli_query($conn, "SELECT IFNULL(SUM(monto),0) AS total FROM gastos_operativos WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'");
+        $g_op = mysqli_fetch_assoc($r1)['total'];
+        $r2 = mysqli_query($conn, "SELECT IFNULL(SUM(monto),0) AS total FROM gastos_administrativos WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'");
+        $g_ad = mysqli_fetch_assoc($r2)['total'];
+        $total = number_format($g_op + $g_ad, 2);
+        return "⛽ Gastos del mes actual:\n\n• Gastos Operativos (flota): S/ " . number_format($g_op, 2) . "\n• Gastos Administrativos: S/ " . number_format($g_ad, 2) . "\n• Total de Gastos: S/ $total";
     }
 
-    // UTILIDAD DEL MES
-    if (tiene($p, ['utilidad', 'ganancia', 'rentabilidad', 'cuanto ganamos', 'cuánto ganamos'])) {
-        $mes = date('Y-m');
-        $ing = mysqli_fetch_assoc(mysqli_query($conn,
-            "SELECT COALESCE(SUM(precio_cliente),0) t FROM servicios WHERE DATE_FORMAT(fecha_servicio,'%Y-%m')='$mes'"));
-        $op  = mysqli_fetch_assoc(mysqli_query($conn,
-            "SELECT COALESCE(SUM(monto),0) t FROM gastos_operativos WHERE DATE_FORMAT(fecha,'%Y-%m')='$mes'"));
-        $adm = mysqli_fetch_assoc(mysqli_query($conn,
-            "SELECT COALESCE(SUM(monto),0) t FROM gastos_administrativos WHERE DATE_FORMAT(fecha,'%Y-%m')='$mes'"));
-        $util = $ing['t'] - $op['t'] - $adm['t'];
-        return "Utilidad estimada de " . date('F Y') . ":\n" .
-               "• Ingresos: S/ " . number_format($ing['t'], 2) . "\n" .
-               "• Gastos: S/ " . number_format($op['t'] + $adm['t'], 2) . "\n" .
-               "─────────────────\n" .
-               "• Utilidad: S/ " . number_format($util, 2);
+    // 6. UTILIDAD DEL MES
+    if (tiene($p, ['utilidad', 'ganancia', 'margen', 'rentabilidad'])) {
+        $mes = date('m');
+        $anio = date('Y');
+        $rf = mysqli_query($conn, "SELECT IFNULL(SUM(precio_cliente),0) AS total FROM servicios WHERE MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'");
+        $fac = (float)mysqli_fetch_assoc($rf)['total'];
+        $r1 = mysqli_query($conn, "SELECT IFNULL(SUM(monto),0) AS total FROM gastos_operativos WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'");
+        $g_op = (float)mysqli_fetch_assoc($r1)['total'];
+        $r2 = mysqli_query($conn, "SELECT IFNULL(SUM(monto),0) AS total FROM gastos_administrativos WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'");
+        $g_ad = (float)mysqli_fetch_assoc($r2)['total'];
+        $ut = $fac - ($g_op + $g_ad);
+        return "📈 Utilidad Neta del Mes:\n\n• Facturación: S/ " . number_format($fac, 2) . "\n• Total Gastos: S/ " . number_format($g_op + $g_ad, 2) . "\n• Utilidad Neta: S/ " . number_format($ut, 2);
     }
 
-    // CONDUCTORES DISPONIBLES HOY
-    if (tiene($p, ['conductor', 'chofer', 'disponible', 'libre hoy'])) {
+    // 7. CONDUCTORES DISPONIBLES HOY
+    if (tiene($p, ['conductor', 'conductores', 'chofer', 'choferes', 'disponibles hoy', 'quien esta libre'])) {
         $hoy = date('Y-m-d');
         $res = mysqli_query($conn,
-            "SELECT CONCAT(nombre, ' ', apellido) AS nombre FROM conductores
-             WHERE id NOT IN (
+            "SELECT nombre, telefono FROM conductores
+             WHERE estado = 'activo'
+             AND id NOT IN (
                  SELECT conductor_id FROM servicios
-                 WHERE fecha_servicio = '$hoy' AND estado_servicio != 'cancelado'
+                 WHERE fecha_servicio = '$hoy'
+                 AND estado_servicio != 'cancelado'
              )");
-        if (mysqli_num_rows($res) == 0)
-            return "Todos los conductores tienen servicio asignado hoy.";
-        $txt = "Conductores disponibles hoy:\n";
-        while ($f = mysqli_fetch_assoc($res)) $txt .= "• {$f['nombre']}\n";
+        $total = mysqli_num_rows($res);
+        if ($total == 0) return "No hay conductores disponibles para hoy (todos asignados o en descanso).";
+        $txt = "🧑‍✈️ Conductores disponibles hoy ($total):\n\n";
+        while ($f = mysqli_fetch_assoc($res)) {
+            $txt .= "• {$f['nombre']}" . ($f['telefono'] ? " — Tel: {$f['telefono']}" : "") . "\n";
+        }
         return trim($txt);
     }
 
-    // TOTAL DE CLIENTES
-    if (tiene($p, ['cuantos clientes', 'cuántos clientes', 'total clientes', 'clientes registrados'])) {
-        $f = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) t FROM clientes"));
-        return "Tienes {$f['t']} clientes registrados en el sistema.";
-    }
-
-    // TOTAL DE VEHÍCULOS
-    if (tiene($p, ['vehiculo', 'vehículo', 'unidades', 'flota', 'cuantos vehiculos'])) {
-        $f = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) t FROM vehiculos"));
-        return "La flota cuenta con {$f['t']} vehículos registrados.";
-    }
-
-    // ── PREGUNTAS DE PROCESO ──────────────────────────────────
-
-    if (tiene($p, ['registrar servicio', 'nuevo servicio', 'crear servicio', 'agregar servicio']))
-        return "Para registrar un servicio:\n1. Ve a Servicios → Nuevo\n2. Completa fecha, hora, cliente, vehículo y conductor\n3. Ingresa origen, destino y precio al cliente\n4. Selecciona tipo de comprobante\n5. Guarda — se generará la guía GRT automáticamente.";
-
-    if (tiene($p, ['cambiar estado', 'actualizar estado', 'pasar a en ruta', 'pasar a finalizado']))
-        return "Para cambiar el estado de un servicio:\n1. Ve a Servicios → Programación\n2. Elige la fecha del servicio\n3. Usa los botones:\n   • Programado → En ruta\n   • En ruta → Finalizado";
-
-    if (tiene($p, ['registrar gasto', 'nuevo gasto', 'agregar gasto']))
-        return "Para registrar un gasto:\n• Gasto operativo: ve a Gastos Operativos → Nuevo\n• Gasto administrativo: ve a Gastos Administrativos → Nuevo\nIngresa fecha, descripción y monto, luego guarda.";
-
-    if (tiene($p, ['factura', 'boleta', 'comprobante', 'igv']))
-        return "El sistema genera comprobantes automáticamente:\n• Factura → serie F001-XXXXXX\n• Boleta → serie B001-XXXXXX\n• Sin comprobante → no se calcula IGV\nEl IGV se calcula al 18% sobre el precio al cliente.";
-
-    if (tiene($p, ['guia', 'guía', 'grt', 'guia de remision']))
-        return "La guía de remisión transportista (GRT) se genera automáticamente al crear el servicio con el formato GRT-000001. No necesitas crearla manualmente.";
-
-    if (tiene($p, ['login', 'contraseña', 'clave', 'acceso', 'usuario']))
-        return "Para cambiar tu contraseña:\n1. Ve al módulo Usuarios\n2. Selecciona tu usuario\n3. Usa la opción Cambiar Contraseña\n\nSi olvidaste tu clave, contacta al administrador del sistema.";
-
-    if (tiene($p, ['reporte', 'reportes', 'informe']))
-        return "Los reportes disponibles están en el módulo Reportes:\n• Servicios del período\n• Facturación\n• Utilidad\n• Facturación por cliente\n\nTodos se pueden exportar a Excel o imprimir.";
-
-    // NO ENTENDIDA
-    return "No entendí tu pregunta. Intenta con algo como:\n\n• \"servicios de hoy\"\n• \"estado del servicio #25\"\n• \"facturación del mes\"\n• \"gastos del mes\"\n• \"utilidad del mes\"\n• \"conductores disponibles\"\n• \"cómo registrar un servicio\"";
+    // RESPUESTA POR DEFECTO
+    return "No logré entender tu consulta. Intenta preguntando por:\n• 'servicios de hoy'\n• 'facturacion del mes'\n• 'gastos del mes'\n• 'utilidad'\n• 'conductores disponibles'\n• 'estado del servicio #ID'";
 }
 
-// ─────────────────────────────────────────────
 function tiene($texto, $palabras) {
-    foreach ($palabras as $p)
-        if (strpos($texto, $p) !== false) return true;
+    foreach ($palabras as $palabra) {
+        if (strpos($texto, $palabra) !== false) return true;
+    }
     return false;
 }
+?>

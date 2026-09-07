@@ -1,23 +1,36 @@
 <?php
+// clientes/guardar.php - Registrar nuevo cliente
+require_once __DIR__ . "/../config/conexion.php";
+require_auth();
 
-include("../config/conexion.php");
+$data = get_request_data();
 
-$nombre = $_POST['nombre'];
-$documento = $_POST['documento'];
-$telefono = $_POST['telefono'];
-$email = $_POST['email'];
-$direccion = $_POST['direccion'];
-$tipo_cliente = $_POST['tipo_cliente'];
+$nombre = mysqli_real_escape_string($conn, trim($data['nombre'] ?? ''));
+$documento = mysqli_real_escape_string($conn, trim($data['documento'] ?? ''));
+$telefono = mysqli_real_escape_string($conn, trim($data['telefono'] ?? ''));
+$email = mysqli_real_escape_string($conn, trim($data['email'] ?? ''));
+$direccion = mysqli_real_escape_string($conn, trim($data['direccion'] ?? ''));
+$tipo_cliente = mysqli_real_escape_string($conn, trim($data['tipo_cliente'] ?? 'Empresa'));
 
-$sql="INSERT INTO clientes
-(nombre,documento,telefono,email,direccion,tipo_cliente)
+if (empty($nombre)) {
+    json_response(["success" => false, "error" => "El nombre o razón social es obligatorio."], 400);
+}
 
-VALUES
+$sql = "INSERT INTO clientes (nombre, documento, telefono, email, direccion, tipo_cliente)
+        VALUES ('$nombre', '$documento', '$telefono', '$email', '$direccion', '$tipo_cliente')";
 
-('$nombre','$documento','$telefono','$email','$direccion','$tipo_cliente')";
-
-mysqli_query($conn,$sql);
-
-header("Location:index.php");
-
+if (mysqli_query($conn, $sql)) {
+    $nuevo_id = mysqli_insert_id($conn);
+    if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || !empty($data)) {
+        json_response([
+            "success" => true,
+            "message" => "Cliente registrado correctamente.",
+            "id" => $nuevo_id
+        ], 201);
+    }
+    header("Location: index.php");
+    exit;
+} else {
+    json_response(["success" => false, "error" => "Error al guardar cliente: " . mysqli_error($conn)], 500);
+}
 ?>

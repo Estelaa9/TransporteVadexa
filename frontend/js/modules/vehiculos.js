@@ -1,0 +1,275 @@
+// frontend/js/modules/vehiculos.js - Gestión de la Flota de Vehículos
+import { api, showToast, exportTableToExcel } from '../api.js';
+
+export async function renderVehiculos(container) {
+  let vehiculosList = [];
+
+  container.innerHTML = `
+    <div class="page-title-box">
+      <div class="page-title-main">
+        <i class="bi bi-truck-flatbed text-primary"></i> Flota de Vehículos
+        <span class="page-title-sub">Unidades de transporte, capacidades y estado operativo</span>
+      </div>
+    </div>
+
+    <div class="tms-toolbar">
+      <div class="toolbar-group-left">
+        <button id="btn-veh-nuevo" class="btn-tms btn-tms-primary">
+          <i class="bi bi-plus-circle"></i> Nuevo Vehículo
+        </button>
+        <button id="btn-veh-refresh" class="btn-tms btn-tms-default">
+          <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+        <button id="btn-veh-excel" class="btn-tms btn-tms-default">
+          <i class="bi bi-file-earmark-excel"></i> Excel
+        </button>
+      </div>
+
+      <div class="toolbar-group-right">
+        <div class="search-table-box">
+          <label><i class="bi bi-search"></i> Buscar:</label>
+          <input type="text" id="search-vehiculos" class="search-table-input" placeholder="Placa, modelo, tipo...">
+        </div>
+      </div>
+    </div>
+
+    <div class="tms-table-container">
+      <table class="tms-table" id="tabla-vehiculos">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Placa</th>
+            <th>Modelo / Marca</th>
+            <th>Tipo de Unidad</th>
+            <th>Capacidad de Carga</th>
+            <th>Estado</th>
+            <th class="no-export" style="text-align: center;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-vehiculos">
+          <tr><td colspan="7" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando flota...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 10px; font-size: 12px; color: #64748b;" id="vehiculos-contador">
+      Total de unidades: 0
+    </div>
+
+    <!-- Modal Nuevo / Editar Vehículo -->
+    <div class="tms-modal-backdrop" id="modal-vehiculo">
+      <div class="tms-modal-dialog" style="max-width: 550px;">
+        <div class="tms-modal-header">
+          <div class="tms-modal-title" id="modal-vehiculo-titulo">
+            <i class="bi bi-truck"></i> Registrar Vehículo
+          </div>
+          <button class="tms-modal-close" id="btn-close-modal-vehiculo">&times;</button>
+        </div>
+        <form id="form-vehiculo">
+          <input type="hidden" id="veh-id" name="id">
+          <div class="tms-modal-body">
+            <div class="form-grid">
+              
+              <div class="col-6 form-group">
+                <label class="form-label">Placa de Rodaje *</label>
+                <input type="text" id="veh-placa" class="form-control-tms" required placeholder="ABC-123" style="text-transform: uppercase; font-weight: 700;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label">Modelo / Marca *</label>
+                <input type="text" id="veh-modelo" class="form-control-tms" required placeholder="Ej: Volvo FH / Isuzu Forward">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label">Tipo de Unidad</label>
+                <input type="text" id="veh-tipo" class="form-control-tms" placeholder="Furgón, Plataforma, Baranda">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label">Capacidad de Carga</label>
+                <input type="text" id="veh-capacidad" class="form-control-tms" placeholder="Ej: 5 Toneladas / 30 m3">
+              </div>
+
+              <div class="col-12 form-group">
+                <label class="form-label">Estado Operativo</label>
+                <select id="veh-estado" class="form-control-tms">
+                  <option value="activo">Activo / Operativo</option>
+                  <option value="mantenimiento">En Mantenimiento</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+          <div class="tms-modal-footer">
+            <button type="button" class="btn-tms btn-tms-default" id="btn-cancel-modal-vehiculo">Cancelar</button>
+            <button type="submit" class="btn-tms btn-tms-primary" id="btn-guardar-vehiculo">
+              <i class="bi bi-save"></i> Guardar Vehículo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  const tbody = document.getElementById('tbody-vehiculos');
+  const searchInput = document.getElementById('search-vehiculos');
+  const modal = document.getElementById('modal-vehiculo');
+  const form = document.getElementById('form-vehiculo');
+
+  async function loadVehiculos() {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando vehículos...</td></tr>`;
+    try {
+      const res = await api.get('vehiculos/index.php');
+      if (res.success) {
+        vehiculosList = res.data || [];
+        renderTable();
+      }
+    } catch (err) {
+      showToast(err.message || 'Error al cargar vehículos', 'error');
+    }
+  }
+
+  function renderTable() {
+    const q = searchInput.value.toLowerCase().trim();
+    const filtered = vehiculosList.filter(v => {
+      if (!q) return true;
+      const t = `${v.id} ${v.placa} ${v.modelo} ${v.tipo} ${v.capacidad} ${v.estado}`.toLowerCase();
+      return t.includes(q);
+    });
+
+    document.getElementById('vehiculos-contador').textContent = `Total de vehículos: ${filtered.length}`;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 25px; color: #64748b;">No hay vehículos registrados.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(v => {
+      let badgeEstado = '<span class="badge-status" style="background:#dcfce7; color:#15803d;">Activo</span>';
+      if (v.estado === 'mantenimiento') {
+        badgeEstado = '<span class="badge-status" style="background:#fef3c7; color:#92400e;">Mantenimiento</span>';
+      } else if (v.estado === 'inactivo') {
+        badgeEstado = '<span class="badge-status" style="background:#fee2e2; color:#991b1b;">Inactivo</span>';
+      }
+
+      return `
+        <tr>
+          <td><strong>#${v.id}</strong></td>
+          <td><strong style="color: #1d4ed8; font-size: 13px; letter-spacing: 0.5px;">${v.placa}</strong></td>
+          <td>${v.modelo || '-'}</td>
+          <td><span class="badge-status" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">${v.tipo || '-'}</span></td>
+          <td>${v.capacidad || '-'}</td>
+          <td>${badgeEstado}</td>
+          <td class="no-export" style="text-align: center; white-space: nowrap;">
+            <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${v.id}" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${v.id}" title="Eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', handleAction);
+    });
+  }
+
+  async function handleAction(e) {
+    const btn = e.currentTarget;
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    if (action === 'edit') {
+      try {
+        const res = await api.get('vehiculos/index.php', { action: 'get', id });
+        if (res.success && res.data) {
+          const v = res.data;
+          document.getElementById('veh-id').value = v.id;
+          document.getElementById('modal-vehiculo-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Vehículo #${v.id}`;
+          document.getElementById('veh-placa').value = v.placa || '';
+          document.getElementById('veh-modelo').value = v.modelo || '';
+          document.getElementById('veh-tipo').value = v.tipo || '';
+          document.getElementById('veh-capacidad').value = v.capacidad || '';
+          document.getElementById('veh-estado').value = v.estado || 'activo';
+          modal.classList.add('show');
+        }
+      } catch (err) {
+        showToast(err.message || 'Error al obtener vehículo', 'error');
+      }
+    } else if (action === 'delete') {
+      if (confirm('¿Está seguro de eliminar este vehículo?')) {
+        try {
+          const res = await api.delete('vehiculos/eliminar.php', { id });
+          if (res.success) {
+            showToast('Vehículo eliminado', 'success');
+            loadVehiculos();
+          }
+        } catch (err) {
+          showToast(err.message || 'Error al eliminar', 'error');
+        }
+      }
+    }
+  }
+
+  function openNewModal() {
+    form.reset();
+    document.getElementById('veh-id').value = '';
+    document.getElementById('modal-vehiculo-titulo').innerHTML = `<i class="bi bi-truck"></i> Registrar Nuevo Vehículo`;
+    modal.classList.add('show');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('veh-id').value;
+    const isEdit = Boolean(id);
+
+    const payload = {
+      id: id || undefined,
+      placa: document.getElementById('veh-placa').value.toUpperCase().trim(),
+      modelo: document.getElementById('veh-modelo').value.trim(),
+      tipo: document.getElementById('veh-tipo').value.trim(),
+      capacidad: document.getElementById('veh-capacidad').value.trim(),
+      estado: document.getElementById('veh-estado').value,
+    };
+
+    const btn = document.getElementById('btn-guardar-vehiculo');
+    btn.disabled = true;
+
+    try {
+      let res;
+      if (isEdit) {
+        res = await api.post('vehiculos/actualizar.php', payload);
+      } else {
+        res = await api.post('vehiculos/guardar.php', payload);
+      }
+
+      if (res.success) {
+        showToast(res.message || 'Vehículo guardado', 'success');
+        modal.classList.remove('show');
+        loadVehiculos();
+      }
+    } catch (err) {
+      showToast(err.message || 'Error al guardar vehículo', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('btn-veh-nuevo').addEventListener('click', openNewModal);
+  document.getElementById('btn-veh-refresh').addEventListener('click', () => {
+    loadVehiculos();
+    showToast('Flota actualizada', 'info');
+  });
+  document.getElementById('btn-close-modal-vehiculo').addEventListener('click', () => modal.classList.remove('show'));
+  document.getElementById('btn-cancel-modal-vehiculo').addEventListener('click', () => modal.classList.remove('show'));
+  searchInput.addEventListener('input', renderTable);
+  document.getElementById('btn-veh-excel').addEventListener('click', () => {
+    exportTableToExcel('tabla-vehiculos', 'flota_vehiculos_vadexsa.csv');
+  });
+
+  await loadVehiculos();
+}

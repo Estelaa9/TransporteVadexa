@@ -1,19 +1,35 @@
 <?php
+// conductores/guardar.php - Registrar conductor
+require_once __DIR__ . "/../config/conexion.php";
+require_auth();
 
-include("../config/conexion.php");
+$data = get_request_data();
 
-$nombre=$_POST['nombre'];
-$telefono=$_POST['telefono'];
-$licencia=$_POST['licencia'];
-$estado=$_POST['estado'];
+$nombre = mysqli_real_escape_string($conn, trim($data['nombre'] ?? ''));
+$licencia = strtoupper(mysqli_real_escape_string($conn, trim($data['licencia'] ?? '')));
+$telefono = mysqli_real_escape_string($conn, trim($data['telefono'] ?? ''));
+$direccion = mysqli_real_escape_string($conn, trim($data['direccion'] ?? ''));
+$estado = mysqli_real_escape_string($conn, trim($data['estado'] ?? 'activo'));
 
-$sql="INSERT INTO conductores
-(nombre,telefono,licencia,estado)
-VALUES
-('$nombre','$telefono','$licencia','$estado')";
+if (empty($nombre) || empty($licencia)) {
+    json_response(["success" => false, "error" => "El nombre y la licencia/brevete son obligatorios."], 400);
+}
 
-mysqli_query($conn,$sql);
+$sql = "INSERT INTO conductores (nombre, licencia, telefono, direccion, estado)
+        VALUES ('$nombre', '$licencia', '$telefono', '$direccion', '$estado')";
 
-header("Location:index.php");
-
+if (mysqli_query($conn, $sql)) {
+    $nuevo_id = mysqli_insert_id($conn);
+    if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || !empty($data)) {
+        json_response([
+            "success" => true,
+            "message" => "Conductor {$nombre} registrado correctamente.",
+            "id" => $nuevo_id
+        ], 201);
+    }
+    header("Location: index.php");
+    exit;
+} else {
+    json_response(["success" => false, "error" => "Error al guardar conductor: " . mysqli_error($conn)], 500);
+}
 ?>
