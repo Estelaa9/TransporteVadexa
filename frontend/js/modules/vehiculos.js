@@ -70,29 +70,49 @@ export async function renderVehiculos(container) {
           <div class="tms-modal-body">
             <div class="form-grid">
               
-              <div class="col-6 form-group">
-                <label class="form-label">Placa de Rodaje *</label>
-                <input type="text" id="veh-placa" class="form-control-tms" required placeholder="ABC-123" style="text-transform: uppercase; font-weight: 700;">
+              <!-- Datos del Vehículo -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-truck-flatbed" style="font-size: 16px;"></i>
+                    <span>DATOS DEL VEHÍCULO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Modelo / Marca *</label>
-                <input type="text" id="veh-modelo" class="form-control-tms" required placeholder="Ej: Volvo FH / Isuzu Forward">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Placa de Rodaje *</label>
+                <input type="text" id="veh-placa" class="form-control-tms" required placeholder="ABC-123" style="text-transform: uppercase; font-weight: 700; border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Tipo de Unidad</label>
-                <input type="text" id="veh-tipo" class="form-control-tms" placeholder="Furgón, Plataforma, Baranda">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Modelo / Marca *</label>
+                <input type="text" id="veh-modelo" class="form-control-tms" required placeholder="Ej: Volvo FH / Isuzu Forward" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <!-- Características Técnicas -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-gear-fill" style="font-size: 16px;"></i>
+                    <span>CARACTERÍSTICAS TÉCNICAS</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Capacidad de Carga</label>
-                <input type="text" id="veh-capacidad" class="form-control-tms" placeholder="Ej: 5 Toneladas / 30 m3">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Tipo de Unidad</label>
+                <input type="text" id="veh-tipo" class="form-control-tms" placeholder="Furgón, Plataforma, Baranda" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Capacidad de Carga</label>
+                <input type="text" id="veh-capacidad" class="form-control-tms" placeholder="Ej: 5 Toneladas / 30 m3" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-12 form-group">
-                <label class="form-label">Estado Operativo</label>
-                <select id="veh-estado" class="form-control-tms">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Estado Operativo</label>
+                <select id="veh-estado" class="form-control-tms" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="activo">Activo / Operativo</option>
                   <option value="mantenimiento">En Mantenimiento</option>
                   <option value="inactivo">Inactivo</option>

@@ -94,43 +94,61 @@ export async function renderServicios(container) {
         </div>
         <form id="form-servicio">
           <input type="hidden" id="srv-id" name="id">
-          <div class="tms-modal-body">
-            <div class="form-grid">
-              
-              <div class="col-3 form-group">
-                <label class="form-label">Fecha del Servicio *</label>
-                <input type="date" id="srv-fecha" name="fecha_servicio" class="form-control-tms" required>
-              </div>
+          <div class="tms-modal-body" style="max-height: 70vh; overflow-y: auto; padding: 24px;">
+            
+            <!-- SECCIÓN 1: ASIGNACIÓN DE RECURSOS -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                <i class="bi bi-truck-flatbed" style="font-size: 16px;"></i>
+                <span>ASIGNACIÓN DE RECURSOS</span>
+              </h4>
+              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Vehículo, cliente y conductor asignados al servicio</p>
+            </div>
 
-              <div class="col-3 form-group">
-                <label class="form-label">Hora</label>
-                <input type="time" id="srv-hora" name="hora_servicio" class="form-control-tms">
-              </div>
-
-              <div class="col-6 form-group">
-                <label class="form-label">Cliente *</label>
-                <select id="srv-cliente" name="cliente_id" class="form-control-tms" required>
-                  <option value="">Seleccione un cliente</option>
-                </select>
-              </div>
-
-              <div class="col-6 form-group">
-                <label class="form-label">Vehículo *</label>
-                <select id="srv-vehiculo" name="vehiculo_id" class="form-control-tms" required>
+            <div class="form-grid" style="margin-bottom: 28px;">
+              <div class="col-4 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-truck" style="color: #1e40af;"></i> Vehículo (Placa) <span style="color: #dc2626;">*</span>
+                </label>
+                <select id="srv-vehiculo" name="vehiculo_id" class="form-control-tms" required style="font-weight: 600; color: #1e40af; border: 2px solid #e2e8f0;">
                   <option value="">Seleccione un vehículo</option>
                 </select>
               </div>
 
-              <div class="col-6 form-group">
-                <label class="form-label">Conductor *</label>
-                <select id="srv-conductor" name="conductor_id" class="form-control-tms" required>
-                  <option value="">Seleccione un conductor</option>
+              <div class="col-4 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-building" style="color: #1e40af;"></i> Cliente <span style="color: #dc2626;">*</span>
+                </label>
+                <select id="srv-cliente" name="cliente_id" class="form-control-tms" required style="font-weight: 600; border: 2px solid #e2e8f0;">
+                  <option value="">Seleccione un cliente</option>
                 </select>
               </div>
 
+              <div class="col-4 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-person-badge" style="color: #1e40af;"></i> Conductor <span style="color: #dc2626;">*</span>
+                </label>
+                <select id="srv-conductor" name="conductor_id" class="form-control-tms" required style="font-weight: 500; border: 2px solid #e2e8f0;">
+                  <option value="">Seleccione un conductor</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 2: DETALLES DEL SERVICIO -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                <i class="bi bi-box-seam" style="font-size: 16px;"></i>
+                <span>DETALLES DEL SERVICIO</span>
+              </h4>
+              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Tipo de servicio, carga, modalidad y forma de pago</p>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 28px;">
               <div class="col-3 form-group">
-                <label class="form-label">Tipo Servicio</label>
-                <select id="srv-tipo-servicio" name="tipo_servicio" class="form-control-tms">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-tags" style="color: #1e40af;"></i> Tipo Servicio
+                </label>
+                <select id="srv-tipo-servicio" name="tipo_servicio" class="form-control-tms" style="border: 2px solid #e2e8f0;">
                   <option value="Local">Local</option>
                   <option value="Provincia">Provincia</option>
                   <option value="Mudanza">Mudanza</option>
@@ -140,8 +158,10 @@ export async function renderServicios(container) {
               </div>
 
               <div class="col-3 form-group">
-                <label class="form-label">Tipo Carga</label>
-                <select id="srv-tipo-carga" name="tipo_carga" class="form-control-tms">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-box" style="color: #1e40af;"></i> Tipo Carga
+                </label>
+                <select id="srv-tipo-carga" name="tipo_carga" class="form-control-tms" style="border: 2px solid #e2e8f0;">
                   <option value="General">General</option>
                   <option value="Frágil">Frágil</option>
                   <option value="Refrigerada">Refrigerada</option>
@@ -151,46 +171,83 @@ export async function renderServicios(container) {
               </div>
 
               <div class="col-3 form-group">
-                <label class="form-label">Modalidad *</label>
-                <select id="srv-modalidad" name="modalidad" class="form-control-tms" required>
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-shield-check" style="color: #1e40af;"></i> Modalidad <span style="color: #dc2626;">*</span>
+                </label>
+                <select id="srv-modalidad" name="modalidad" class="form-control-tms" required style="border: 2px solid #e2e8f0;">
                   <option value="propio">Propio (Flota)</option>
                   <option value="tercerizado">Tercerizado</option>
                 </select>
               </div>
 
               <div class="col-3 form-group">
-                <label class="form-label">Forma de Pago</label>
-                <select id="srv-forma-pago" name="forma_pago" class="form-control-tms">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-credit-card" style="color: #1e40af;"></i> Forma de Pago
+                </label>
+                <select id="srv-forma-pago" name="forma_pago" class="form-control-tms" style="border: 2px solid #e2e8f0;">
                   <option value="Contado">Contado</option>
                   <option value="Crédito 15 días">Crédito 15 días</option>
                   <option value="Crédito 30 días">Crédito 30 días</option>
                   <option value="Contra entrega">Contra entrega</option>
                 </select>
               </div>
+            </div>
+
+            <!-- SECCIÓN 3: RUTA DEL SERVICIO -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                <i class="bi bi-map" style="font-size: 16px;"></i>
+                <span>RUTA DEL SERVICIO</span>
+              </h4>
+              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Punto de origen y destino del transporte</p>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 28px;">
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-geo-alt" style="color: #1e40af;"></i> Origen <span style="color: #dc2626;">*</span>
+                </label>
+                <input type="text" id="srv-origen" name="origen" class="form-control-tms" placeholder="Dirección / Almacén / Distrito Origen" required style="border: 2px solid #e2e8f0;">
+              </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Origen *</label>
-                <input type="text" id="srv-origen" name="origen" class="form-control-tms" placeholder="Dirección / Almacén Origen" required>
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-geo-alt-fill" style="color: #1e40af;"></i> Destino <span style="color: #dc2626;">*</span>
+                </label>
+                <input type="text" id="srv-destino" name="destino" class="form-control-tms" placeholder="Dirección / Distrito Destino" required style="border: 2px solid #e2e8f0;">
               </div>
+            </div>
 
-              <div class="col-6 form-group">
-                <label class="form-label">Destino *</label>
-                <input type="text" id="srv-destino" name="destino" class="form-control-tms" placeholder="Dirección Destino" required>
+            <!-- SECCIÓN 4: INFORMACIÓN FINANCIERA -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                <i class="bi bi-currency-dollar" style="font-size: 16px;"></i>
+                <span>INFORMACIÓN FINANCIERA</span>
+              </h4>
+              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Precios, costos, IGV y comprobantes</p>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 28px;">
+              <div class="col-4 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-cash-coin" style="color: #16a34a;"></i> Precio Cliente (S/) <span style="color: #dc2626;">*</span>
+                </label>
+                <input type="number" step="0.01" id="srv-precio-cliente" name="precio_cliente" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #16a34a; font-size: 15px; border: 2px solid #bbf7d0; background: #f0fdf4;">
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label">Precio Cliente (S/) *</label>
-                <input type="number" step="0.01" id="srv-precio-cliente" name="precio_cliente" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #1e293b;">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-wallet2" style="color: #dc2626;"></i> Costo Proveedor (S/)
+                </label>
+                <input type="number" step="0.01" id="srv-costo-proveedor" name="costo_proveedor" class="form-control-tms" placeholder="0.00" disabled style="font-weight: 600; color: #dc2626; border: 2px solid #fecaca; background: #fef2f2;">
+                <small style="color: #64748b; font-size: 10px; display: block; margin-top: 4px;">Solo si es Tercerizado</small>
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label">Costo Proveedor (S/)</label>
-                <input type="number" step="0.01" id="srv-costo-proveedor" name="costo_proveedor" class="form-control-tms" placeholder="0.00" disabled>
-              </div>
-
-              <div class="col-4 form-group">
-                <label class="form-label">Comprobante *</label>
-                <select id="srv-tipo-comprobante" name="tipo_comprobante" class="form-control-tms">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-receipt" style="color: #1e40af;"></i> Tipo Comprobante <span style="color: #dc2626;">*</span>
+                </label>
+                <select id="srv-tipo-comprobante" name="tipo_comprobante" class="form-control-tms" style="border: 2px solid #e2e8f0;">
                   <option value="FACTURA">FACTURA</option>
                   <option value="BOLETA">BOLETA</option>
                   <option value="SIN_COMPROBANTE">SIN COMPROBANTE</option>
@@ -198,45 +255,96 @@ export async function renderServicios(container) {
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label">Base Imponible (S/)</label>
-                <input type="text" id="srv-base" name="base_imponible" class="form-control-tms" readonly>
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-calculator" style="color: #64748b;"></i> Base Imponible (S/)
+                </label>
+                <input type="text" id="srv-base" name="base_imponible" class="form-control-tms" readonly style="background: #f8fafc; border: 2px solid #e2e8f0; font-weight: 600; color: #475569;">
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label">IGV (18%)</label>
-                <input type="text" id="srv-igv" name="igv" class="form-control-tms" readonly>
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-percent" style="color: #64748b;"></i> IGV 18% (S/)
+                </label>
+                <input type="text" id="srv-igv" name="igv" class="form-control-tms" readonly style="background: #f8fafc; border: 2px solid #e2e8f0; font-weight: 600; color: #475569;">
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label">N° Factura / Boleta</label>
-                <input type="text" id="srv-factura" name="numero_factura" class="form-control-tms" placeholder="Generado automático">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-hash" style="color: #0284c7;"></i> N° Factura / Boleta
+                </label>
+                <input type="text" id="srv-factura" name="numero_factura" class="form-control-tms" placeholder="Generado automático" style="font-weight: 600; color: #0284c7; border: 2px solid #e0f2fe; background: #f0f9ff;">
+              </div>
+            </div>
+
+            <!-- SECCIÓN 5: GUÍAS Y DOCUMENTACIÓN -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                <i class="bi bi-file-text" style="font-size: 16px;"></i>
+                <span>GUÍAS Y DOCUMENTACIÓN</span>
+              </h4>
+              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Guías de remisión y transporte</p>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 28px;">
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-file-earmark-text" style="color: #1e40af;"></i> Guía Remitente
+                </label>
+                <input type="text" id="srv-guia-rem" name="guia_remitente" class="form-control-tms" placeholder="T001-XXXXXX" style="font-weight: 600; border: 2px solid #e2e8f0;">
               </div>
 
-              <div class="col-4 form-group">
-                <label class="form-label">Guía Remitente</label>
-                <input type="text" id="srv-guia-rem" name="guia_remitente" class="form-control-tms" placeholder="T001-XXXXXX">
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-file-earmark-check" style="color: #0284c7;"></i> Guía Transportista
+                </label>
+                <input type="text" id="srv-guia-trans" name="guia_transportista" class="form-control-tms" placeholder="GRT-XXXXXX" readonly style="background: #f0f9ff; font-weight: 700; color: #0284c7; border: 2px solid #e0f2fe;">
+                <small style="color: #64748b; font-size: 10px; display: block; margin-top: 4px;">Generado automáticamente</small>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 6: INFORMACIÓN DEL SERVICIO -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                <i class="bi bi-calendar3" style="font-size: 16px;"></i>
+                <span>INFORMACIÓN DEL SERVICIO</span>
+              </h4>
+              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Fecha, hora y estado del servicio</p>
+            </div>
+
+            <div class="form-grid">
+              <div class="col-3 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-calendar-event" style="color: #1e40af;"></i> Fecha del Servicio <span style="color: #dc2626;">*</span>
+                </label>
+                <input type="date" id="srv-fecha" name="fecha_servicio" class="form-control-tms" required style="border: 2px solid #e2e8f0; font-weight: 600;">
               </div>
 
-              <div class="col-4 form-group">
-                <label class="form-label">Guía Transportista</label>
-                <input type="text" id="srv-guia-trans" name="guia_transportista" class="form-control-tms" placeholder="GRT-XXXXXX" readonly>
+              <div class="col-3 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-clock" style="color: #1e40af;"></i> Hora
+                </label>
+                <input type="time" id="srv-hora" name="hora_servicio" class="form-control-tms" style="border: 2px solid #e2e8f0; font-weight: 600;">
               </div>
 
-              <div class="col-4 form-group">
-                <label class="form-label">Estado del Servicio *</label>
-                <select id="srv-estado" name="estado_servicio" class="form-control-tms" required>
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
+                  <i class="bi bi-circle-fill" style="color: #eab308; font-size: 8px;"></i> Estado del Servicio <span style="color: #dc2626;">*</span>
+                </label>
+                <select id="srv-estado" name="estado_servicio" class="form-control-tms" required style="border: 2px solid #e2e8f0; font-weight: 600;">
                   <option value="programado">Programado</option>
                   <option value="en_ruta">En Ruta</option>
                   <option value="finalizado">Finalizado / Liquidado</option>
                   <option value="cancelado">Cancelado</option>
                 </select>
               </div>
-
             </div>
+
           </div>
-          <div class="tms-modal-footer">
-            <button type="button" class="btn-tms btn-tms-default" id="btn-cancel-modal-servicio">Cancelar</button>
-            <button type="submit" class="btn-tms btn-tms-primary" id="btn-guardar-servicio">
+          <div class="tms-modal-footer" style="background: #f8fafc; border-top: 2px solid #e2e8f0; padding: 16px 24px;">
+            <button type="button" class="btn-tms btn-tms-default" id="btn-cancel-modal-servicio">
+              <i class="bi bi-x-circle"></i> Cancelar
+            </button>
+            <button type="submit" class="btn-tms btn-tms-primary" id="btn-guardar-servicio" style="padding: 10px 24px; font-size: 14px; font-weight: 700;">
               <i class="bi bi-save"></i> Guardar Servicio
             </button>
           </div>

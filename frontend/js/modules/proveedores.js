@@ -69,24 +69,44 @@ export async function renderProveedores(container) {
           <div class="tms-modal-body">
             <div class="form-grid">
               
-              <div class="col-12 form-group">
-                <label class="form-label">Nombre o Empresa Proveedor *</label>
-                <input type="text" id="prov-nombre" class="form-control-tms" required placeholder="Ej: Transportes del Norte S.A.C.">
+              <!-- Datos del Proveedor -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-box-seam-fill" style="font-size: 16px;"></i>
+                    <span>DATOS DEL PROVEEDOR</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-12 form-group">
-                <label class="form-label">Teléfono / Celular</label>
-                <input type="text" id="prov-telefono" class="form-control-tms" placeholder="987654321">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Nombre o Empresa Proveedor *</label>
+                <input type="text" id="prov-nombre" class="form-control-tms" required placeholder="Ej: Transportes del Norte S.A.C." style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-12 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Teléfono / Celular</label>
+                <input type="text" id="prov-telefono" class="form-control-tms" placeholder="987654321" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <!-- Información del Vehículo -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-truck-flatbed" style="font-size: 16px;"></i>
+                    <span>INFORMACIÓN DEL VEHÍCULO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Vehículo / Capacidad</label>
-                <input type="text" id="prov-vehiculo" class="form-control-tms" placeholder="Furgón 10 Ton">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Vehículo / Capacidad</label>
+                <input type="text" id="prov-vehiculo" class="form-control-tms" placeholder="Furgón 10 Ton" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Placa del Vehículo</label>
-                <input type="text" id="prov-placa" class="form-control-tms" placeholder="XYZ-987" style="text-transform: uppercase;">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Placa del Vehículo</label>
+                <input type="text" id="prov-placa" class="form-control-tms" placeholder="XYZ-987" style="text-transform: uppercase; border: 2px solid #e2e8f0; padding: 10px 14px; background: #dbeafe;">
               </div>
 
             </div>

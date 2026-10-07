@@ -76,37 +76,57 @@ export async function renderClientes(container) {
           <div class="tms-modal-body">
             <div class="form-grid">
               
+              <!-- Datos del Cliente -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-building-fill" style="font-size: 16px;"></i>
+                    <span>DATOS DEL CLIENTE</span>
+                  </h4>
+                </div>
+              </div>
+
               <div class="col-12 form-group">
-                <label class="form-label">Nombre o Razón Social *</label>
-                <input type="text" id="cli-nombre" class="form-control-tms" required placeholder="Ej: VADEXSA LOGISTIC S.A.C.">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Nombre o Razón Social *</label>
+                <input type="text" id="cli-nombre" class="form-control-tms" required placeholder="Ej: VADEXSA LOGISTIC S.A.C." style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Tipo de Cliente *</label>
-                <select id="cli-tipo" class="form-control-tms" required>
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Tipo de Cliente *</label>
+                <select id="cli-tipo" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="Empresa">Empresa</option>
                   <option value="Persona">Persona Natural</option>
                 </select>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">N° Documento (RUC / DNI)</label>
-                <input type="text" id="cli-documento" class="form-control-tms" placeholder="20604629293">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">N° Documento (RUC / DNI)</label>
+                <input type="text" id="cli-documento" class="form-control-tms" placeholder="20604629293" style="border: 2px solid #e2e8f0; padding: 10px 14px; background: #dbeafe;">
+              </div>
+
+              <!-- Información de Contacto -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-telephone-fill" style="font-size: 16px;"></i>
+                    <span>INFORMACIÓN DE CONTACTO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Teléfono / Celular</label>
-                <input type="text" id="cli-telefono" class="form-control-tms" placeholder="987654321">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Teléfono / Celular</label>
+                <input type="text" id="cli-telefono" class="form-control-tms" placeholder="987654321" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Correo Electrónico</label>
-                <input type="email" id="cli-email" class="form-control-tms" placeholder="contacto@cliente.com">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Correo Electrónico</label>
+                <input type="email" id="cli-email" class="form-control-tms" placeholder="contacto@cliente.com" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-12 form-group">
-                <label class="form-label">Dirección Fiscal / Despacho</label>
-                <input type="text" id="cli-direccion" class="form-control-tms" placeholder="Av. Principal 123, Lima">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Dirección Fiscal / Despacho</label>
+                <input type="text" id="cli-direccion" class="form-control-tms" placeholder="Av. Principal 123, Lima" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
             </div>

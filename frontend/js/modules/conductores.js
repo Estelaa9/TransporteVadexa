@@ -70,29 +70,49 @@ export async function renderConductores(container) {
           <div class="tms-modal-body">
             <div class="form-grid">
               
+              <!-- Datos Personales -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-person-badge-fill" style="font-size: 16px;"></i>
+                    <span>DATOS PERSONALES</span>
+                  </h4>
+                </div>
+              </div>
+
               <div class="col-12 form-group">
-                <label class="form-label">Nombre Completo *</label>
-                <input type="text" id="cond-nombre" class="form-control-tms" required placeholder="Nombres y Apellidos">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Nombre Completo *</label>
+                <input type="text" id="cond-nombre" class="form-control-tms" required placeholder="Nombres y Apellidos" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">N° Licencia de Conducir (Brevete) *</label>
-                <input type="text" id="cond-licencia" class="form-control-tms" required placeholder="Ej: Q12345678" style="text-transform: uppercase;">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">N° Licencia de Conducir (Brevete) *</label>
+                <input type="text" id="cond-licencia" class="form-control-tms" required placeholder="Ej: Q12345678" style="text-transform: uppercase; border: 2px solid #e2e8f0; padding: 10px 14px; background: #dbeafe;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Teléfono / Celular</label>
-                <input type="text" id="cond-telefono" class="form-control-tms" placeholder="987654321">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Teléfono / Celular</label>
+                <input type="text" id="cond-telefono" class="form-control-tms" placeholder="987654321" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <!-- Información de Contacto -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-geo-alt-fill" style="font-size: 16px;"></i>
+                    <span>INFORMACIÓN DE CONTACTO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-8 form-group">
-                <label class="form-label">Dirección</label>
-                <input type="text" id="cond-direccion" class="form-control-tms" placeholder="Domicilio del conductor">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Dirección</label>
+                <input type="text" id="cond-direccion" class="form-control-tms" placeholder="Domicilio del conductor" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label">Estado</label>
-                <select id="cond-estado" class="form-control-tms">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Estado</label>
+                <select id="cond-estado" class="form-control-tms" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="activo">Activo</option>
                   <option value="descanso">En Descanso</option>
                   <option value="inactivo">Inactivo</option>

@@ -1,13 +1,13 @@
 // frontend/js/router.js - Enrutador dinámico SPA para Transporte Vadexa
 import { auth } from './modules/auth.js';
 import { renderDashboard } from './modules/dashboard.js';
-import { renderServicios } from './modules/servicios.js';
+import { renderServicios } from './modules/servicios.js?v=3.0';
 import { renderProgramacion } from './modules/programacion.js';
-import { renderClientes } from './modules/clientes.js';
-import { renderVehiculos } from './modules/vehiculos.js';
-import { renderConductores } from './modules/conductores.js';
-import { renderProveedores } from './modules/proveedores.js';
-import { renderGastos } from './modules/gastos.js';
+import { renderClientes } from './modules/clientes.js?v=3.0';
+import { renderVehiculos } from './modules/vehiculos.js?v=3.0';
+import { renderConductores } from './modules/conductores.js?v=3.0';
+import { renderProveedores } from './modules/proveedores.js?v=3.0';
+import { renderGastos } from './modules/gastos.js?v=3.0';
 import { renderReportes } from './modules/reportes.js';
 import { initChatbot } from './modules/chatbot.js';
 

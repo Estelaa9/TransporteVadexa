@@ -89,21 +89,41 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
           <div class="tms-modal-body">
             <div class="form-grid">
               
-              <div class="col-6 form-group">
-                <label class="form-label">Fecha *</label>
-                <input type="date" id="gop-fecha" class="form-control-tms" required>
+              <!-- Información del Gasto -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-fuel-pump-fill" style="font-size: 16px;"></i>
+                    <span>INFORMACIÓN DEL GASTO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Vehículo Vinculado *</label>
-                <select id="gop-vehiculo" class="form-control-tms" required>
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Fecha *</label>
+                <input type="date" id="gop-fecha" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Vehículo Vinculado *</label>
+                <select id="gop-vehiculo" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px; background: #dbeafe;">
                   <option value="">Seleccione vehículo</option>
                 </select>
               </div>
 
+              <!-- Detalle del Gasto -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-receipt" style="font-size: 16px;"></i>
+                    <span>DETALLE DEL GASTO</span>
+                  </h4>
+                </div>
+              </div>
+
               <div class="col-6 form-group">
-                <label class="form-label">Tipo de Gasto *</label>
-                <select id="gop-tipo" class="form-control-tms" required>
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Tipo de Gasto *</label>
+                <select id="gop-tipo" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="Combustible">Combustible / Petróleo</option>
                   <option value="Peaje">Peajes</option>
                   <option value="Mantenimiento">Mantenimiento Mecánico</option>
@@ -115,13 +135,13 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Monto (S/) *</label>
-                <input type="number" step="0.01" id="gop-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626;">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Monto (S/) *</label>
+                <input type="number" step="0.01" id="gop-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626; border: 2px solid #e2e8f0; padding: 10px 14px; background: #fee2e2;">
               </div>
 
               <div class="col-12 form-group">
-                <label class="form-label">Descripción / Detalle</label>
-                <input type="text" id="gop-descripcion" class="form-control-tms" placeholder="Detalle del gasto o estación de servicio">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Descripción / Detalle</label>
+                <input type="text" id="gop-descripcion" class="form-control-tms" placeholder="Detalle del gasto o estación de servicio" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
             </div>
@@ -150,14 +170,24 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
           <div class="tms-modal-body">
             <div class="form-grid">
               
-              <div class="col-6 form-group">
-                <label class="form-label">Fecha *</label>
-                <input type="date" id="gad-fecha" class="form-control-tms" required>
+              <!-- Información del Gasto -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-building-fill" style="font-size: 16px;"></i>
+                    <span>INFORMACIÓN DEL GASTO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Tipo de Gasto *</label>
-                <select id="gad-tipo" class="form-control-tms" required>
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Fecha *</label>
+                <input type="date" id="gad-fecha" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Tipo de Gasto *</label>
+                <select id="gad-tipo" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="Sueldos">Sueldos y Planilla</option>
                   <option value="Alquiler">Alquiler de Oficina / Local</option>
                   <option value="Servicios Básicos">Servicios Básicos (Luz, Agua, Internet)</option>
@@ -168,14 +198,24 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
                 </select>
               </div>
 
+              <!-- Detalle del Gasto -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-receipt" style="font-size: 16px;"></i>
+                    <span>DETALLE DEL GASTO</span>
+                  </h4>
+                </div>
+              </div>
+
               <div class="col-12 form-group">
-                <label class="form-label">Descripción *</label>
-                <input type="text" id="gad-descripcion" class="form-control-tms" required placeholder="Concepto del gasto">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Descripción *</label>
+                <input type="text" id="gad-descripcion" class="form-control-tms" required placeholder="Concepto del gasto" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Monto (S/) *</label>
-                <input type="number" step="0.01" id="gad-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626;">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Monto (S/) *</label>
+                <input type="number" step="0.01" id="gad-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626; border: 2px solid #e2e8f0; padding: 10px 14px; background: #fee2e2;">
               </div>
 
             </div>
