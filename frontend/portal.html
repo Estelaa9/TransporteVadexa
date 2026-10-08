@@ -23,7 +23,7 @@
   <div id="tms-content-container"></div>
 
   <script type="module">
-    import { renderMisServicios, renderProgramacion, renderMisReportes } from './js/modules/portal-cliente.js?v=1.1';
+    import { renderMisServicios, renderProgramacion, renderMisReportes, renderReporteServicios, renderReporteFacturacion } from './js/modules/portal-cliente.js?v=1.3';
     
     const container = document.getElementById('tms-content-container');
     
@@ -39,6 +39,10 @@
           await renderProgramacion(container);
         } else if (hash === '#reportes') {
           await renderMisReportes(container);
+        } else if (hash === '#reportes/servicios') {
+          await renderReporteServicios(container);
+        } else if (hash === '#reportes/facturacion') {
+          await renderReporteFacturacion(container);
         }
         
         // Activar navegación después de renderizar
