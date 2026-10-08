@@ -5,54 +5,52 @@ export async function renderVehiculos(container) {
   let vehiculosList = [];
 
   container.innerHTML = `
-    <div class="page-title-box">
+    <div class="page-title-box" style="background: white; padding: 20px 24px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
       <div class="page-title-main">
-        <i class="bi bi-truck-flatbed text-primary"></i> Flota de Vehículos
-        <span class="page-title-sub">Unidades de transporte, capacidades y estado operativo</span>
+        <i class="bi bi-truck-flatbed" style="color: #1e40af;"></i> Flota de Vehículos
+        <span class="page-title-sub" style="color: #64748b; font-weight: 400;">Unidades de transporte, capacidades y estado operativo</span>
       </div>
     </div>
 
-    <div class="tms-toolbar">
-      <div class="toolbar-group-left">
-        <button id="btn-veh-nuevo" class="btn-tms btn-tms-primary">
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; gap: 10px;">
+        <button id="btn-veh-nuevo" class="btn-tms btn-tms-primary" style="border: 2px solid #1e40af; padding: 8px 16px; font-weight: 600; background: #1e40af; color: white;">
           <i class="bi bi-plus-circle"></i> Nuevo Vehículo
         </button>
-        <button id="btn-veh-refresh" class="btn-tms btn-tms-default">
+        <button id="btn-veh-refresh" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-arrow-clockwise"></i> Actualizar
         </button>
-        <button id="btn-veh-excel" class="btn-tms btn-tms-default">
+        <button id="btn-veh-excel" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
       </div>
 
-      <div class="toolbar-group-right">
-        <div class="search-table-box">
-          <label><i class="bi bi-search"></i> Buscar:</label>
-          <input type="text" id="search-vehiculos" class="search-table-input" placeholder="Placa, modelo, tipo...">
-        </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="color: #64748b; font-size: 13px; font-weight: 600;"><i class="bi bi-search"></i> Buscar:</label>
+        <input type="text" id="search-vehiculos" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 280px; font-size: 13px;" placeholder="Placa, modelo, tipo...">
       </div>
     </div>
 
-    <div class="tms-table-container">
-      <table class="tms-table" id="tabla-vehiculos">
-        <thead>
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <table class="tms-table" id="tabla-vehiculos" style="margin: 0;">
+        <thead style="background: #f8fafc;">
           <tr>
-            <th>ID</th>
-            <th>Placa</th>
-            <th>Modelo / Marca</th>
-            <th>Tipo de Unidad</th>
-            <th>Capacidad de Carga</th>
-            <th>Estado</th>
-            <th class="no-export" style="text-align: center;">Acciones</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">ID</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Placa</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Modelo / Marca</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Tipo de Unidad</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Capacidad de Carga</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Estado</th>
+            <th class="no-export" style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-vehiculos">
-          <tr><td colspan="7" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando flota...</td></tr>
+          <tr><td colspan="7" style="text-align: center; padding: 40px 25px; color: #94a3b8;">Cargando flota...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div style="margin-top: 10px; font-size: 12px; color: #64748b;" id="vehiculos-contador">
+    <div style="margin-top: 14px; padding: 0 4px; font-size: 13px; color: #64748b; font-weight: 600;" id="vehiculos-contador">
       Total de unidades: 0
     </div>
 

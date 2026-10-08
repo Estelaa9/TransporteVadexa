@@ -5,53 +5,51 @@ export async function renderProveedores(container) {
   let proveedoresList = [];
 
   container.innerHTML = `
-    <div class="page-title-box">
+    <div class="page-title-box" style="background: white; padding: 20px 24px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
       <div class="page-title-main">
-        <i class="bi bi-box-seam-fill text-primary"></i> Proveedores de Transporte
-        <span class="page-title-sub">Gestión de empresas y unidades tercerizadas</span>
+        <i class="bi bi-box-seam-fill" style="color: #1e40af;"></i> Proveedores de Transporte
+        <span class="page-title-sub" style="color: #64748b; font-weight: 400;">Gestión de empresas y unidades tercerizadas</span>
       </div>
     </div>
 
-    <div class="tms-toolbar">
-      <div class="toolbar-group-left">
-        <button id="btn-prov-nuevo" class="btn-tms btn-tms-primary">
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; gap: 10px;">
+        <button id="btn-prov-nuevo" class="btn-tms btn-tms-primary" style="border: 2px solid #1e40af; padding: 8px 16px; font-weight: 600; background: #1e40af; color: white;">
           <i class="bi bi-plus-circle"></i> Nuevo Proveedor
         </button>
-        <button id="btn-prov-refresh" class="btn-tms btn-tms-default">
+        <button id="btn-prov-refresh" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-arrow-clockwise"></i> Actualizar
         </button>
-        <button id="btn-prov-excel" class="btn-tms btn-tms-default">
+        <button id="btn-prov-excel" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
       </div>
 
-      <div class="toolbar-group-right">
-        <div class="search-table-box">
-          <label><i class="bi bi-search"></i> Buscar:</label>
-          <input type="text" id="search-proveedores" class="search-table-input" placeholder="Nombre, placa, teléfono...">
-        </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="color: #64748b; font-size: 13px; font-weight: 600;"><i class="bi bi-search"></i> Buscar:</label>
+        <input type="text" id="search-proveedores" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 280px; font-size: 13px;" placeholder="Nombre, placa, teléfono...">
       </div>
     </div>
 
-    <div class="tms-table-container">
-      <table class="tms-table" id="tabla-proveedores">
-        <thead>
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <table class="tms-table" id="tabla-proveedores" style="margin: 0;">
+        <thead style="background: #f8fafc;">
           <tr>
-            <th>ID</th>
-            <th>Nombre / Empresa Proveedor</th>
-            <th>Teléfono de Contacto</th>
-            <th>Tipo / Modelo Vehículo</th>
-            <th>Placa de la Unidad</th>
-            <th class="no-export" style="text-align: center;">Acciones</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">ID</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Nombre / Empresa Proveedor</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Teléfono de Contacto</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Tipo / Modelo Vehículo</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Placa de la Unidad</th>
+            <th class="no-export" style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-proveedores">
-          <tr><td colspan="6" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando proveedores...</td></tr>
+          <tr><td colspan="6" style="text-align: center; padding: 40px 25px; color: #94a3b8;">Cargando proveedores...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div style="margin-top: 10px; font-size: 12px; color: #64748b;" id="proveedores-contador">
+    <div style="margin-top: 14px; padding: 0 4px; font-size: 13px; color: #64748b; font-weight: 600;" id="proveedores-contador">
       Total de proveedores: 0
     </div>
 

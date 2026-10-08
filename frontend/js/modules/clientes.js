@@ -5,60 +5,58 @@ export async function renderClientes(container) {
   let clientesList = [];
 
   container.innerHTML = `
-    <div class="page-title-box">
+    <div class="page-title-box" style="background: white; padding: 20px 24px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
       <div class="page-title-main">
-        <i class="bi bi-people-fill text-primary"></i> Directorio de Clientes
-        <span class="page-title-sub">Gestión de cuentas corporativas, personas y su historial</span>
+        <i class="bi bi-people-fill" style="color: #1e40af;"></i> Directorio de Clientes
+        <span class="page-title-sub" style="color: #64748b; font-weight: 400;">Gestión de cuentas corporativas, personas y su historial</span>
       </div>
     </div>
 
-    <div class="tms-toolbar">
-      <div class="toolbar-group-left">
-        <button id="btn-cli-nuevo" class="btn-tms btn-tms-primary">
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button id="btn-cli-nuevo" class="btn-tms btn-tms-primary" style="border: 2px solid #1e40af; padding: 8px 16px; font-weight: 600; background: #1e40af; color: white;">
           <i class="bi bi-person-plus-fill"></i> Nuevo Cliente
         </button>
-        <button id="btn-cli-refresh" class="btn-tms btn-tms-default">
+        <button id="btn-cli-refresh" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-arrow-clockwise"></i> Actualizar
         </button>
-        <button id="btn-cli-excel" class="btn-tms btn-tms-default">
+        <button id="btn-cli-excel" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
-        <select id="cli-filtro-tipo" class="form-control-tms" style="width: 140px;">
+        <select id="cli-filtro-tipo" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 150px; font-weight: 600; font-size: 13px;">
           <option value="">Todos los tipos</option>
           <option value="Empresa">Empresa / RUC</option>
           <option value="Persona">Persona / DNI</option>
         </select>
       </div>
 
-      <div class="toolbar-group-right">
-        <div class="search-table-box">
-          <label><i class="bi bi-search"></i> Buscar:</label>
-          <input type="text" id="search-clientes" class="search-table-input" placeholder="Nombre, RUC, teléfono...">
-        </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="color: #64748b; font-size: 13px; font-weight: 600;"><i class="bi bi-search"></i> Buscar:</label>
+        <input type="text" id="search-clientes" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 280px; font-size: 13px;" placeholder="Nombre, RUC, teléfono...">
       </div>
     </div>
 
-    <div class="tms-table-container">
-      <table class="tms-table" id="tabla-clientes">
-        <thead>
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <table class="tms-table" id="tabla-clientes" style="margin: 0;">
+        <thead style="background: #f8fafc;">
           <tr>
-            <th>ID</th>
-            <th>Nombre / Razón Social</th>
-            <th>Tipo</th>
-            <th>RUC / DNI</th>
-            <th>Teléfono</th>
-            <th>Dirección</th>
-            <th>Email</th>
-            <th class="no-export" style="text-align: center;">Acciones</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">ID</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Nombre / Razón Social</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Tipo</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">RUC / DNI</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Teléfono</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Dirección</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Email</th>
+            <th class="no-export" style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-clientes">
-          <tr><td colspan="8" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando clientes...</td></tr>
+          <tr><td colspan="8" style="text-align: center; padding: 40px 25px; color: #94a3b8;">Cargando clientes...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div style="margin-top: 10px; font-size: 12px; color: #64748b;" id="clientes-contador">
+    <div style="margin-top: 14px; padding: 0 4px; font-size: 13px; color: #64748b; font-weight: 600;" id="clientes-contador">
       Total de clientes: 0
     </div>
 

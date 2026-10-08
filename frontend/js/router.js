@@ -1,15 +1,16 @@
 // frontend/js/router.js - Enrutador dinámico SPA para Transporte Vadexa
 import { auth } from './modules/auth.js';
-import { renderDashboard } from './modules/dashboard.js';
-import { renderServicios } from './modules/servicios.js?v=3.0';
+import { renderDashboard } from './modules/dashboard.js?v=3.1';
+import { renderServicios } from './modules/servicios.js?v=3.1';
 import { renderProgramacion } from './modules/programacion.js';
-import { renderClientes } from './modules/clientes.js?v=3.0';
-import { renderVehiculos } from './modules/vehiculos.js?v=3.0';
-import { renderConductores } from './modules/conductores.js?v=3.0';
-import { renderProveedores } from './modules/proveedores.js?v=3.0';
-import { renderGastos } from './modules/gastos.js?v=3.0';
+import { renderClientes } from './modules/clientes.js?v=3.1';
+import { renderVehiculos } from './modules/vehiculos.js?v=3.1';
+import { renderConductores } from './modules/conductores.js?v=3.1';
+import { renderProveedores } from './modules/proveedores.js?v=3.1';
+import { renderGastos } from './modules/gastos.js?v=3.1';
 import { renderReportes } from './modules/reportes.js';
 import { initChatbot } from './modules/chatbot.js';
+import { renderMisServicios, renderProgramacion as renderProgramacionCliente, renderMisReportes } from './modules/portal-cliente.js?v=1.0';
 
 const routes = {
   '#dashboard': renderDashboard,
@@ -22,6 +23,10 @@ const routes = {
   '#gastos-operativos': (c) => renderGastos(c, 'operativos'),
   '#gastos-admin': (c) => renderGastos(c, 'administrativos'),
   '#reportes': renderReportes,
+  // Rutas del portal del cliente
+  '#portal-servicios': renderMisServicios,
+  '#portal-programacion': renderProgramacionCliente,
+  '#portal-reportes': renderMisReportes,
   '#login': (c) => auth.renderLogin(c),
   '#logout': () => auth.logout(),
 };

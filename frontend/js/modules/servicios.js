@@ -9,78 +9,76 @@ export async function renderServicios(container) {
   let conductoresList = [];
 
   container.innerHTML = `
-    <div class="page-title-box">
+    <div class="page-title-box" style="background: white; padding: 20px 24px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
       <div class="page-title-main">
-        <i class="bi bi-truck text-primary"></i> Control de Servicios y Liquidaciones
-        <span class="page-title-sub">Operaciones de transporte, fletes y liquidación</span>
+        <i class="bi bi-truck" style="color: #1e40af;"></i> Control de Servicios y Liquidaciones
+        <span class="page-title-sub" style="color: #64748b; font-weight: 400;">Operaciones de transporte, fletes y liquidación</span>
       </div>
     </div>
 
     <!-- Pestañas de navegación -->
-    <div class="tms-tabs">
-      <button class="tms-tab-btn active" id="tab-sin-liquidar" data-tab="sin_liquidar">
+    <div class="tms-tabs" style="margin-bottom: 20px;">
+      <button class="tms-tab-btn active" id="tab-sin-liquidar" data-tab="sin_liquidar" style="border: 2px solid #e2e8f0; border-bottom: 3px solid #1e40af; font-weight: 600;">
         <i class="bi bi-hourglass-split"></i> Viajes sin liquidar
       </button>
-      <button class="tms-tab-btn" id="tab-liquidaciones" data-tab="liquidaciones">
+      <button class="tms-tab-btn" id="tab-liquidaciones" data-tab="liquidaciones" style="border: 2px solid #e2e8f0; font-weight: 600;">
         <i class="bi bi-check2-all"></i> Liquidaciones y Finalizados
       </button>
     </div>
 
     <!-- Barra de herramientas empresarial -->
-    <div class="tms-toolbar">
-      <div class="toolbar-group-left">
-        <button id="btn-servicios-refresh" class="btn-tms btn-tms-default">
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; gap: 10px;">
+        <button id="btn-servicios-refresh" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-arrow-clockwise"></i> Actualizar
         </button>
-        <button id="btn-servicios-nuevo" class="btn-tms btn-tms-primary">
+        <button id="btn-servicios-nuevo" class="btn-tms btn-tms-primary" style="border: 2px solid #1e40af; padding: 8px 16px; font-weight: 600; background: #1e40af; color: white;">
           <i class="bi bi-plus-circle"></i> Nuevo Servicio
         </button>
-        <button id="btn-servicios-imprimir" class="btn-tms btn-tms-default">
+        <button id="btn-servicios-imprimir" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-printer"></i> Imprimir
         </button>
-        <button id="btn-servicios-excel" class="btn-tms btn-tms-default">
+        <button id="btn-servicios-excel" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
       </div>
 
-      <div class="toolbar-group-right">
-        <div class="search-table-box">
-          <label><i class="bi bi-search"></i> Buscar:</label>
-          <input type="text" id="search-servicios" class="search-table-input" placeholder="Cliente, placa, guía...">
-        </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="color: #64748b; font-size: 13px; font-weight: 600;"><i class="bi bi-search"></i> Buscar:</label>
+        <input type="text" id="search-servicios" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 280px; font-size: 13px;" placeholder="Cliente, placa, guía...">
       </div>
     </div>
 
     <!-- Contenedor de la Tabla -->
-    <div class="tms-table-container">
-      <table class="tms-table" id="tabla-servicios-main">
-        <thead>
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <table class="tms-table" id="tabla-servicios-main" style="margin: 0;">
+        <thead style="background: #f8fafc;">
           <tr>
-            <th style="width: 30px; text-align: center;"><input type="checkbox" id="check-all-servicios"></th>
-            <th>ID</th>
-            <th>Fecha / Hora</th>
-            <th>Cliente</th>
-            <th>Vehículo</th>
-            <th>Conductor</th>
-            <th>Origen → Destino</th>
-            <th>G. Remitente</th>
-            <th>G. Transportista</th>
-            <th>Comprobante</th>
-            <th style="text-align: right;">Monto (S/)</th>
-            <th style="text-align: right;">Utilidad (S/)</th>
-            <th style="text-align: center;">Estado</th>
-            <th class="no-export" style="text-align: center;">Acciones</th>
+            <th style="width: 30px; text-align: center; padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;"><input type="checkbox" id="check-all-servicios"></th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">ID</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Fecha / Hora</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Cliente</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Vehículo</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Conductor</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Origen → Destino</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">G. Remitente</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">G. Transportista</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Comprobante</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: right;">Monto</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: right;">Utilidad</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Estado</th>
+            <th class="no-export" style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-servicios">
-          <tr><td colspan="14" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando servicios...</td></tr>
+          <tr><td colspan="14" style="text-align: center; padding: 40px 25px; color: #94a3b8;">Cargando servicios...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: #64748b;">
-      <div id="servicios-contador">Mostrando 0 servicios</div>
-      <div id="servicios-total-monto" style="font-weight: 700; color: #1e293b; font-size: 13px;">Total: S/ 0.00</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 0 4px;">
+      <div id="servicios-contador" style="font-size: 13px; color: #64748b; font-weight: 600;">Mostrando 0 servicios</div>
+      <div id="servicios-total-monto" style="font-weight: 700; color: #0f172a; font-size: 15px;">Total: S/ 0.00</div>
     </div>
 
     <!-- Modal para Crear / Editar Servicio -->
