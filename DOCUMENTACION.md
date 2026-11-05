@@ -1,5 +1,7 @@
 # Documentación del sistema — VADEXSA LOGISTIC / Transporte
 
+> Actualización 22/09/2026: la aplicación utiliza la interfaz SPA de `frontend/index.html` y endpoints JSON. Consulte [Gestión operativa](docs/GESTION_OPERATIVA.md) para el flujo actual, roles, abonos, migración y pruebas. Las secciones históricas siguientes describen también las pantallas PHP anteriores.
+
 Sistema web interno para gestionar servicios de transporte y mudanzas, clientes, flota, conductores, proveedores, gastos y reportes operativos.
 
 ---

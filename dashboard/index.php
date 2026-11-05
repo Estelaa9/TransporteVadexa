@@ -13,13 +13,13 @@ $row = mysqli_fetch_assoc($res);
 $servicios_mes = (int)($row['total'] ?? 0);
 
 // 2. Facturación del mes
-$sql = "SELECT IFNULL(SUM(precio_cliente), 0) as total FROM servicios WHERE MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
+$sql = "SELECT IFNULL(SUM(precio_cliente), 0) as total FROM servicios WHERE COALESCE(TRIM(numero_factura),'') <> '' AND estado_servicio <> 'cancelado' AND MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
 $res = mysqli_query($conn, $sql);
 $row = mysqli_fetch_assoc($res);
 $facturacion = (float)($row['total'] ?? 0);
 
 // 3. IGV generado
-$sql = "SELECT IFNULL(SUM(precio_cliente - (precio_cliente / 1.18)), 0) as igv FROM servicios WHERE tipo_comprobante != 'SIN_COMPROBANTE' AND MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
+$sql = "SELECT IFNULL(SUM(igv), 0) as igv FROM servicios WHERE COALESCE(TRIM(numero_factura),'') <> '' AND estado_servicio <> 'cancelado' AND MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'";
 $res = mysqli_query($conn, $sql);
 $row = mysqli_fetch_assoc($res);
 $igv = (float)($row['igv'] ?? 0);
@@ -37,8 +37,10 @@ $row = mysqli_fetch_assoc($res);
 $gastos_admin = (float)($row['total'] ?? 0);
 
 // 6. Utilidad neta
-$total_gastos = $gastos_operativos + $gastos_admin;
-$utilidad = $facturacion - $total_gastos;
+$adicionales = (float)mysqli_fetch_row(mysqli_query($conn, "SELECT COALESCE(SUM(monto),0) FROM gastos_adicionales WHERE MONTH(fecha)='$mes' AND YEAR(fecha)='$anio'"))[0];
+$finalizados = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(precio_cliente),0) ingreso, COALESCE(SUM(costo_proveedor),0) costo FROM servicios WHERE estado_servicio='finalizado' AND MONTH(fecha_servicio)='$mes' AND YEAR(fecha_servicio)='$anio'"));
+$total_gastos = $gastos_operativos + $gastos_admin + $adicionales + (float)$finalizados['costo'];
+$utilidad = (float)$finalizados['ingreso'] - $total_gastos;
 
 // 7. Servicios recientes (últimos 10)
 $sql_recientes = "SELECT s.*, c.nombre AS cliente, v.placa, co.nombre AS conductor

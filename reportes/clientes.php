@@ -6,7 +6,7 @@ require_auth();
 $desde = $_GET['desde'] ?? '';
 $hasta = $_GET['hasta'] ?? '';
 
-$where_fechas = [];
+$where_fechas = ["s.estado_servicio <> 'cancelado'", "COALESCE(TRIM(s.numero_factura),'') <> ''"];
 if (!empty($desde)) {
     $d_esc = mysqli_real_escape_string($conn, $desde);
     $where_fechas[] = "s.fecha_servicio >= '$d_esc'";

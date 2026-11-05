@@ -58,7 +58,7 @@ export async function renderDashboard(container) {
       <div class="kpi-card purple">
         <div class="kpi-icon-wrap"><i class="bi bi-graph-up-arrow"></i></div>
         <div>
-          <div class="kpi-title">Utilidad Neta</div>
+          <div class="kpi-title">Resultado operativo</div>
           <div class="kpi-value" id="kpi-utilidad">-</div>
         </div>
       </div>

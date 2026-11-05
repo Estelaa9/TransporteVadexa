@@ -94,7 +94,7 @@ export const auth = {
     document.getElementById('form-login').addEventListener('submit', async (e) => {
       e.preventDefault();
       const usuario = document.getElementById('login-usuario').value.trim();
-      const password = document.getElementById('login-password').value.trim();
+      const password = document.getElementById('login-password').value;
       const btn = document.getElementById('btn-login-submit');
 
       btn.disabled = true;

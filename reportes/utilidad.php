@@ -6,7 +6,7 @@ require_auth();
 $desde = $_GET['desde'] ?? '';
 $hasta = $_GET['hasta'] ?? '';
 
-$where_fechas = [];
+$where_fechas = ["estado_servicio = 'finalizado'"];
 if (!empty($desde)) {
     $d_esc = mysqli_real_escape_string($conn, $desde);
     $where_fechas[] = "fecha_servicio >= '$d_esc'";

@@ -21,7 +21,8 @@ if (session_status() === PHP_SESSION_NONE) {
 $host = "localhost";
 $user = "root";
 $pass = "";
-$db   = "transporte_db";
+$db   = getenv('VADEXSA_DB_NAME') ?: "transporte_db";
+date_default_timezone_set('America/Lima');
 
 $conn = mysqli_connect($host, $user, $pass, $db);
 
@@ -74,6 +75,22 @@ function require_auth() {
             "error" => "No autorizado. Inicie sesión.",
             "auth_required" => true
         ], 401);
+    }
+    // Revalidar permisos para que una baja o un cambio de rol sea inmediato.
+    global $conn;
+    $stmt = mysqli_prepare($conn, 'SELECT rol, estado FROM usuarios WHERE usuario = ? LIMIT 1');
+    mysqli_stmt_bind_param($stmt, 's', $_SESSION['usuario']);
+    mysqli_stmt_execute($stmt);
+    $user = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    if (!$user || $user['estado'] !== 'activo') {
+        session_unset();
+        json_response(['success' => false, 'error' => 'Sesión no válida.', 'auth_required' => true], 401);
+    }
+    $_SESSION['rol'] = $user['rol'];
+    $module = basename(dirname($_SERVER['SCRIPT_FILENAME'] ?? ''));
+    if (in_array($module, ['facturas', 'reportes', 'gastos_administrativos', 'gastos_adicionales', 'dashboard'], true) &&
+        !in_array(strtolower($user['rol']), ['admin', 'administrador'], true)) {
+        json_response(['success' => false, 'error' => 'Esta sección requiere el rol de administrador.'], 403);
     }
 }
 ?>

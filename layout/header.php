@@ -1,9 +1,10 @@
 <?php
-session_start();
+require_once __DIR__ . '/../config/conexion.php';
 if(!isset($_SESSION['usuario'])){
     header("Location: ../login.php");
     exit;
 }
+require_auth();
 ?>
 <!DOCTYPE html>
 <html lang="es">

@@ -202,7 +202,7 @@ export async function renderReportes(container) {
       document.getElementById('rep-kpi2-title').textContent = 'Facturación Bruta';
       document.getElementById('rep-kpi2-val').textContent = fmt.moneda(res.total_facturado);
       document.getElementById('rep-kpi3-box').style.display = 'flex';
-      document.getElementById('rep-kpi3-title').textContent = 'Utilidad Neta';
+      document.getElementById('rep-kpi3-title').textContent = 'Margen antes de gastos';
       document.getElementById('rep-kpi3-val').textContent = fmt.moneda(res.total_utilidad);
 
       thead.innerHTML = `
@@ -210,9 +210,9 @@ export async function renderReportes(container) {
           <th>ID</th>
           <th>Fecha</th>
           <th>Modalidad</th>
-          <th style="text-align: right;">Cobrado a Cliente (S/)</th>
+          <th style="text-align: right;">Precio del servicio (S/)</th>
           <th style="text-align: right;">Costo Proveedor (S/)</th>
-          <th style="text-align: right;">Utilidad Neta (S/)</th>
+          <th style="text-align: right;">Margen antes de gastos (S/)</th>
         </tr>
       `;
 
