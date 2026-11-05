@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TEST - Formulario Mejorado VADEXSA</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body {
+      padding: 40px;
+      background: #f1f5f9;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #1e40af;
+      margin-bottom: 10px;
+    }
+    .alert {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid;
+    }
+    .alert-success {
+      background: #d1fae5;
+      border-color: #10b981;
+      color: #065f46;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 TEST - Formulario Mejorado</h1>
+    <p style="color: #64748b; margin-bottom: 30px;">Versión de prueba del formulario con las mejoras implementadas</p>
+    
+    <div class="alert alert-success">
+      ✅ <strong>Esta es una página de prueba</strong><br>
+      Si ves las secciones con colores aquí, significa que el problema es de caché del navegador en la página principal.
+    </div>
+
+    <form id="form-servicio-test">
+      <input type="hidden" id="srv-id" name="id">
+      
+      <div style="max-height: 70vh; overflow-y: auto;">
+        
+        <!-- SECCIÓN 1: INFORMACIÓN PRINCIPAL -->
+        <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; color: white;">
+          <h4 style="margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-calendar3"></i> Información del Servicio
+          </h4>
+          <p style="margin: 4px 0 0 0; font-size: 11px; opacity: 0.9;">Fecha, hora y datos principales del servicio</p>
+        </div>
+
+        <div class="form-grid" style="margin-bottom: 25px;">
+          <div class="col-3 form-group">
+            <label class="form-label"><i class="bi bi-calendar-event"></i> Fecha del Servicio *</label>
+            <input type="date" class="form-control-tms" required>
+          </div>
+
+          <div class="col-3 form-group">
+            <label class="form-label"><i class="bi bi-clock"></i> Hora</label>
+            <input type="time" class="form-control-tms">
+          </div>
+
+          <div class="col-6 form-group">
+            <label class="form-label"><i class="bi bi-geo-alt-fill"></i> Estado del Servicio *</label>
+            <select class="form-control-tms" required>
+              <option value="programado">🟡 Programado</option>
+              <option value="en_ruta">🔵 En Ruta</option>
+              <option value="finalizado">🟢 Finalizado / Liquidado</option>
+              <option value="cancelado">🔴 Cancelado</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 2: ASIGNACIÓN DE RECURSOS (PLACA → CLIENTE → CONDUCTOR) -->
+        <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; color: white;">
+          <h4 style="margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-truck-flatbed"></i> Asignación de Recursos
+          </h4>
+          <p style="margin: 4px 0 0 0; font-size: 11px; opacity: 0.9;">Vehículo, cliente y conductor asignados al servicio</p>
+        </div>
+
+        <div class="form-grid" style="margin-bottom: 25px;">
+          <div class="col-4 form-group">
+            <label class="form-label"><i class="bi bi-truck"></i> Vehículo (Placa) *</label>
+            <select class="form-control-tms" required style="font-weight: 700; color: #1e40af;">
+              <option value="">Seleccione un vehículo</option>
+              <option value="1">ABC-123 - Volvo FH16</option>
+              <option value="2">XYZ-789 - Mercedes Actros</option>
+            </select>
+          </div>
+
+          <div class="col-4 form-group">
+            <label class="form-label"><i class="bi bi-building"></i> Cliente *</label>
+            <select class="form-control-tms" required style="font-weight: 600;">
+              <option value="">Seleccione un cliente</option>
+              <option value="1">Empresa ABC S.A.C.</option>
+              <option value="2">Distribuidora XYZ</option>
+            </select>
+          </div>
+
+          <div class="col-4 form-group">
+            <label class="form-label"><i class="bi bi-person-badge"></i> Conductor *</label>
+            <select class="form-control-tms" required>
+              <option value="">Seleccione un conductor</option>
+              <option value="1">Juan Pérez López</option>
+              <option value="2">Carlos García Ruiz</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- SECCIÓN 3: DETALLES DEL SERVICIO -->
+        <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; color: white;">
+          <h4 style="margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-box-seam"></i> Detalles del Servicio
+          </h4>
+          <p style="margin: 4px 0 0 0; font-size: 11px; opacity: 0.9;">Tipo de servicio, carga, modalidad y forma de pago</p>
+        </div>
+
+        <div class="form-grid" style="margin-bottom: 25px;">
+          <div class="col-3 form-group">
+            <label class="form-label"><i class="bi bi-tags"></i> Tipo Servicio</label>
+            <select class="form-control-tms">
+              <option value="Local">🏙️ Local</option>
+              <option value="Provincia">🌄 Provincia</option>
+              <option value="Mudanza">📦 Mudanza</option>
+            </select>
+          </div>
+
+          <div class="col-3 form-group">
+            <label class="form-label"><i class="bi bi-box"></i> Tipo Carga</label>
+            <select class="form-control-tms">
+              <option value="General">📦 General</option>
+              <option value="Frágil">⚠️ Frágil</option>
+              <option value="Refrigerada">❄️ Refrigerada</option>
+            </select>
+          </div>
+
+          <div class="col-3 form-group">
+            <label class="form-label"><i class="bi bi-shield-check"></i> Modalidad *</label>
+            <select class="form-control-tms" required>
+              <option value="propio">✅ Propio (Flota)</option>
+              <option value="tercerizado">🔗 Tercerizado</option>
+            </select>
+          </div>
+
+          <div class="col-3 form-group">
+            <label class="form-label"><i class="bi bi-credit-card"></i> Forma de Pago</label>
+            <select class="form-control-tms">
+              <option value="Contado">💵 Contado</option>
+              <option value="Crédito 15 días">📅 Crédito 15 días</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="background: #f8fafc; border-top: 2px solid #e2e8f0; padding: 16px; margin-top: 20px; border-radius: 0 0 8px 8px;">
+        <button type="button" class="btn-tms btn-tms-default">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
+        <button type="submit" class="btn-tms btn-tms-primary" style="padding: 10px 24px; font-size: 14px; font-weight: 700;">
+          <i class="bi bi-save"></i> Guardar Servicio
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('form-servicio-test').addEventListener('submit', (e) => {
+      e.preventDefault();
+      alert('✅ Formulario de prueba funcionando correctamente!\n\nSi ves las secciones con colores aquí, el problema es que el navegador tiene cacheada la versión anterior en la página principal.\n\nSolución: Cierra TODAS las ventanas del navegador y vuelve a abrir.');
+    });
+  </script>
+</body>
+</html>

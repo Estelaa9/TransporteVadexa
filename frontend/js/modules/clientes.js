@@ -5,60 +5,58 @@ export async function renderClientes(container) {
   let clientesList = [];
 
   container.innerHTML = `
-    <div class="page-title-box">
+    <div class="page-title-box" style="background: white; padding: 20px 24px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
       <div class="page-title-main">
-        <i class="bi bi-people-fill text-primary"></i> Directorio de Clientes
-        <span class="page-title-sub">Gestión de cuentas corporativas, personas y su historial</span>
+        <i class="bi bi-people-fill" style="color: #1e40af;"></i> Directorio de Clientes
+        <span class="page-title-sub" style="color: #64748b; font-weight: 400;">Gestión de cuentas corporativas, personas y su historial</span>
       </div>
     </div>
 
-    <div class="tms-toolbar">
-      <div class="toolbar-group-left">
-        <button id="btn-cli-nuevo" class="btn-tms btn-tms-primary">
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button id="btn-cli-nuevo" class="btn-tms btn-tms-primary" style="border: 2px solid #1e40af; padding: 8px 16px; font-weight: 600; background: #1e40af; color: white;">
           <i class="bi bi-person-plus-fill"></i> Nuevo Cliente
         </button>
-        <button id="btn-cli-refresh" class="btn-tms btn-tms-default">
+        <button id="btn-cli-refresh" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-arrow-clockwise"></i> Actualizar
         </button>
-        <button id="btn-cli-excel" class="btn-tms btn-tms-default">
+        <button id="btn-cli-excel" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
-        <select id="cli-filtro-tipo" class="form-control-tms" style="width: 140px;">
+        <select id="cli-filtro-tipo" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 150px; font-weight: 600; font-size: 13px;">
           <option value="">Todos los tipos</option>
           <option value="Empresa">Empresa / RUC</option>
           <option value="Persona">Persona / DNI</option>
         </select>
       </div>
 
-      <div class="toolbar-group-right">
-        <div class="search-table-box">
-          <label><i class="bi bi-search"></i> Buscar:</label>
-          <input type="text" id="search-clientes" class="search-table-input" placeholder="Nombre, RUC, teléfono...">
-        </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="color: #64748b; font-size: 13px; font-weight: 600;"><i class="bi bi-search"></i> Buscar:</label>
+        <input type="text" id="search-clientes" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 280px; font-size: 13px;" placeholder="Nombre, RUC, teléfono...">
       </div>
     </div>
 
-    <div class="tms-table-container">
-      <table class="tms-table" id="tabla-clientes">
-        <thead>
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <table class="tms-table" id="tabla-clientes" style="margin: 0;">
+        <thead style="background: #f8fafc;">
           <tr>
-            <th>ID</th>
-            <th>Nombre / Razón Social</th>
-            <th>Tipo</th>
-            <th>RUC / DNI</th>
-            <th>Teléfono</th>
-            <th>Dirección</th>
-            <th>Email</th>
-            <th class="no-export" style="text-align: center;">Acciones</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">ID</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Nombre / Razón Social</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Tipo</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">RUC / DNI</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Teléfono</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Dirección</th>
+            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Email</th>
+            <th class="no-export" style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-clientes">
-          <tr><td colspan="8" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando clientes...</td></tr>
+          <tr><td colspan="8" style="text-align: center; padding: 40px 25px; color: #94a3b8;">Cargando clientes...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div style="margin-top: 10px; font-size: 12px; color: #64748b;" id="clientes-contador">
+    <div style="margin-top: 14px; padding: 0 4px; font-size: 13px; color: #64748b; font-weight: 600;" id="clientes-contador">
       Total de clientes: 0
     </div>
 
@@ -76,37 +74,57 @@ export async function renderClientes(container) {
           <div class="tms-modal-body">
             <div class="form-grid">
               
+              <!-- Datos del Cliente -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-building-fill" style="font-size: 16px;"></i>
+                    <span>DATOS DEL CLIENTE</span>
+                  </h4>
+                </div>
+              </div>
+
               <div class="col-12 form-group">
-                <label class="form-label">Nombre o Razón Social *</label>
-                <input type="text" id="cli-nombre" class="form-control-tms" required placeholder="Ej: VADEXSA LOGISTIC S.A.C.">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Nombre o Razón Social *</label>
+                <input type="text" id="cli-nombre" class="form-control-tms" required placeholder="Ej: VADEXSA LOGISTIC S.A.C." style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Tipo de Cliente *</label>
-                <select id="cli-tipo" class="form-control-tms" required>
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Tipo de Cliente *</label>
+                <select id="cli-tipo" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="Empresa">Empresa</option>
                   <option value="Persona">Persona Natural</option>
                 </select>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">N° Documento (RUC / DNI)</label>
-                <input type="text" id="cli-documento" class="form-control-tms" placeholder="20604629293">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">N° Documento (RUC / DNI)</label>
+                <input type="text" id="cli-documento" class="form-control-tms" placeholder="20604629293" style="border: 2px solid #e2e8f0; padding: 10px 14px; background: #dbeafe;">
+              </div>
+
+              <!-- Información de Contacto -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-telephone-fill" style="font-size: 16px;"></i>
+                    <span>INFORMACIÓN DE CONTACTO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Teléfono / Celular</label>
-                <input type="text" id="cli-telefono" class="form-control-tms" placeholder="987654321">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Teléfono / Celular</label>
+                <input type="text" id="cli-telefono" class="form-control-tms" placeholder="987654321" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Correo Electrónico</label>
-                <input type="email" id="cli-email" class="form-control-tms" placeholder="contacto@cliente.com">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Correo Electrónico</label>
+                <input type="email" id="cli-email" class="form-control-tms" placeholder="contacto@cliente.com" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-12 form-group">
-                <label class="form-label">Dirección Fiscal / Despacho</label>
-                <input type="text" id="cli-direccion" class="form-control-tms" placeholder="Av. Principal 123, Lima">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Dirección Fiscal / Despacho</label>
+                <input type="text" id="cli-direccion" class="form-control-tms" placeholder="Av. Principal 123, Lima" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
             </div>

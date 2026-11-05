@@ -9,10 +9,7 @@ import { renderConductores } from './modules/conductores.js';
 import { renderProveedores } from './modules/proveedores.js';
 import { renderGastos } from './modules/gastos.js';
 import { renderReportes } from './modules/reportes.js';
-import { renderFacturas } from './modules/facturas.js';
 import { initChatbot } from './modules/chatbot.js';
-import { renderOperacion, renderCierre, renderUsuarios } from './modules/gestion.js';
-import { renderCuentas } from './modules/cuentas.js';
 
 const routes = {
   '#dashboard': renderDashboard,
@@ -25,11 +22,6 @@ const routes = {
   '#gastos-operativos': (c) => renderGastos(c, 'operativos'),
   '#gastos-admin': (c) => renderGastos(c, 'administrativos'),
   '#reportes': renderReportes,
-  '#facturas': renderFacturas,
-  '#operacion': renderOperacion,
-  '#cierre': renderCierre,
-  '#usuarios': renderUsuarios,
-  '#cuentas': renderCuentas,
   '#login': (c) => auth.renderLogin(c),
   '#logout': () => auth.logout(),
 };
@@ -82,25 +74,6 @@ export async function initRouter() {
     }
 
     // Actualizar sidebar activo
-    const isAdmin = ['admin', 'administrador'].includes(String(user?.rol || '').toLowerCase());
-    const adminRoutes = ['#facturas', '#cuentas', '#cierre', '#usuarios', '#gastos-admin', '#reportes'];
-    document.querySelectorAll('.sidebar-nav a').forEach(link => {
-      link.hidden = !isAdmin && adminRoutes.includes(link.getAttribute('href'));
-    });
-    if (user && !isAdmin && adminRoutes.includes(hash)) {
-      window.location.hash = '#operacion';
-      return;
-    }
-    if (user && !isAdmin && hash === '#dashboard') {
-      container.innerHTML = '<div class="page-title-box"><div class="page-title-main">Mi operación<span class="page-title-sub">Registro y seguimiento de servicios</span></div></div><p><a class="btn-tms btn-tms-primary" href="#operacion">Ver servicios y pendientes</a> <a class="btn-tms btn-tms-default" href="#programacion">Programación diaria</a></p>';
-      const res = await (await import('./api.js')).api.get('servicios/index.php');
-      const counts = {};
-      for (const s of res.data || []) counts[s.estado_servicio] = (counts[s.estado_servicio] || 0) + 1;
-      const summary = document.createElement('p');
-      summary.textContent = `Programados: ${counts.programado || 0} · En ruta: ${counts.en_ruta || 0} · Finalizados: ${counts.finalizado || 0}`;
-      container.appendChild(summary);
-      return;
-    }
     document.querySelectorAll('.nav-item, .nav-subitem').forEach(el => {
       el.classList.remove('active');
       if (el.getAttribute('href') === hash) {

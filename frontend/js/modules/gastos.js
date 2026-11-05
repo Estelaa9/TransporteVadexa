@@ -9,13 +9,15 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
   let vehiculosList = [];
 
   container.innerHTML = `
-    <div class="page-title-box">
-      <div class="page-title-main">
-        <i class="bi bi-wallet2 text-primary"></i> Control de Gastos
-        <span class="page-title-sub">Gestión de egresos operativos (flota) y administrativos</span>
+    <div class="page-title-box" style="background: white; padding: 20px 24px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div class="page-title-main">
+          <i class="bi bi-wallet2" style="color: #1e40af;"></i> Control de Gastos
+          <span class="page-title-sub" style="color: #64748b; font-weight: 400;">Gestión de egresos operativos (flota) y administrativos</span>
+        </div>
       </div>
       <div class="d-flex align-items-center gap-2">
-        <select id="gastos-mes" class="form-control-tms" style="width: 130px;">
+        <select id="gastos-mes" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 130px; font-weight: 600; font-size: 13px;">
           <option value="">Todos los meses</option>
           ${[
             [1, 'Enero'], [2, 'Febrero'], [3, 'Marzo'], [4, 'Abril'],
@@ -23,56 +25,54 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
             [9, 'Septiembre'], [10, 'Octubre'], [11, 'Noviembre'], [12, 'Diciembre']
           ].map(([m, nombre]) => `<option value="${m}" ${m === currentMonth ? 'selected' : ''}>${nombre}</option>`).join('')}
         </select>
-        <select id="gastos-anio" class="form-control-tms" style="width: 90px;">
+        <select id="gastos-anio" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 90px; font-weight: 600; font-size: 13px;">
           <option value="">Todos</option>
           ${[currentYear - 1, currentYear, currentYear + 1].map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('')}
         </select>
-        <button id="btn-gastos-refresh" class="btn-tms btn-tms-default"><i class="bi bi-arrow-clockwise"></i></button>
+        <button id="btn-gastos-refresh" style="border: 2px solid #e2e8f0; padding: 8px 14px; border-radius: 6px; font-weight: 600; background: white;"><i class="bi bi-arrow-clockwise"></i></button>
       </div>
     </div>
 
     <!-- Pestañas -->
-    <div class="tms-tabs">
-      <button class="tms-tab-btn ${currentTab === 'operativos' ? 'active' : ''}" id="tab-gastos-op" data-tab="operativos">
+    <div class="tms-tabs" style="margin-bottom: 20px;">
+      <button class="tms-tab-btn ${currentTab === 'operativos' ? 'active' : ''}" id="tab-gastos-op" data-tab="operativos" style="border: 2px solid #e2e8f0; ${currentTab === 'operativos' ? 'border-bottom: 3px solid #1e40af;' : ''} font-weight: 600;">
         <i class="bi bi-fuel-pump-fill"></i> Gastos Operativos (Flota)
       </button>
-      <button class="tms-tab-btn ${currentTab === 'administrativos' ? 'active' : ''}" id="tab-gastos-admin" data-tab="administrativos">
+      <button class="tms-tab-btn ${currentTab === 'administrativos' ? 'active' : ''}" id="tab-gastos-admin" data-tab="administrativos" style="border: 2px solid #e2e8f0; ${currentTab === 'administrativos' ? 'border-bottom: 3px solid #1e40af;' : ''} font-weight: 600;">
         <i class="bi bi-building-fill"></i> Gastos Administrativos
       </button>
     </div>
 
     <!-- Toolbar -->
-    <div class="tms-toolbar">
-      <div class="toolbar-group-left">
-        <button id="btn-gasto-nuevo" class="btn-tms btn-tms-primary">
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; gap: 10px;">
+        <button id="btn-gasto-nuevo" class="btn-tms btn-tms-primary" style="border: 2px solid #1e40af; padding: 8px 16px; font-weight: 600; background: #1e40af; color: white;">
           <i class="bi bi-plus-circle"></i> Nuevo Gasto
         </button>
-        <button id="btn-gastos-excel" class="btn-tms btn-tms-default">
+        <button id="btn-gastos-excel" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
           <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
       </div>
 
-      <div class="toolbar-group-right">
-        <div class="search-table-box">
-          <label><i class="bi bi-search"></i> Buscar:</label>
-          <input type="text" id="search-gastos" class="search-table-input" placeholder="Descripción, vehículo, tipo...">
-        </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="color: #64748b; font-size: 13px; font-weight: 600;"><i class="bi bi-search"></i> Buscar:</label>
+        <input type="text" id="search-gastos" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 280px; font-size: 13px;" placeholder="Descripción, vehículo, tipo...">
       </div>
     </div>
 
     <!-- Tabla -->
-    <div class="tms-table-container">
-      <table class="tms-table" id="tabla-gastos">
-        <thead id="thead-gastos"></thead>
+    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <table class="tms-table" id="tabla-gastos" style="margin: 0;">
+        <thead id="thead-gastos" style="background: #f8fafc;"></thead>
         <tbody id="tbody-gastos">
-          <tr><td colspan="6" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando gastos...</td></tr>
+          <tr><td colspan="6" style="text-align: center; padding: 40px 25px; color: #94a3b8;">Cargando gastos...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: #64748b;">
-      <div id="gastos-contador">Total de registros: 0</div>
-      <div id="gastos-total-monto" style="font-weight: 700; color: #dc2626; font-size: 13.5px;">Suma Gastos: S/ 0.00</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 0 4px;">
+      <div id="gastos-contador" style="font-size: 13px; color: #64748b; font-weight: 600;">Total de registros: 0</div>
+      <div id="gastos-total-monto" style="font-weight: 700; color: #0f172a; font-size: 15px;">Suma Gastos: S/ 0.00</div>
     </div>
 
     <!-- Modal Nuevo / Editar Gasto Operativo -->
@@ -89,21 +89,41 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
           <div class="tms-modal-body">
             <div class="form-grid">
               
-              <div class="col-6 form-group">
-                <label class="form-label">Fecha *</label>
-                <input type="date" id="gop-fecha" class="form-control-tms" required>
+              <!-- Información del Gasto -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-fuel-pump-fill" style="font-size: 16px;"></i>
+                    <span>INFORMACIÓN DEL GASTO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Vehículo Vinculado *</label>
-                <select id="gop-vehiculo" class="form-control-tms" required>
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Fecha *</label>
+                <input type="date" id="gop-fecha" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Vehículo Vinculado *</label>
+                <select id="gop-vehiculo" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px; background: #dbeafe;">
                   <option value="">Seleccione vehículo</option>
                 </select>
               </div>
 
+              <!-- Detalle del Gasto -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-receipt" style="font-size: 16px;"></i>
+                    <span>DETALLE DEL GASTO</span>
+                  </h4>
+                </div>
+              </div>
+
               <div class="col-6 form-group">
-                <label class="form-label">Tipo de Gasto *</label>
-                <select id="gop-tipo" class="form-control-tms" required>
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Tipo de Gasto *</label>
+                <select id="gop-tipo" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="Combustible">Combustible / Petróleo</option>
                   <option value="Peaje">Peajes</option>
                   <option value="Mantenimiento">Mantenimiento Mecánico</option>
@@ -115,13 +135,13 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Monto (S/) *</label>
-                <input type="number" step="0.01" id="gop-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626;">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Monto (S/) *</label>
+                <input type="number" step="0.01" id="gop-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626; border: 2px solid #e2e8f0; padding: 10px 14px; background: #fee2e2;">
               </div>
 
               <div class="col-12 form-group">
-                <label class="form-label">Descripción / Detalle</label>
-                <input type="text" id="gop-descripcion" class="form-control-tms" placeholder="Detalle del gasto o estación de servicio">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Descripción / Detalle</label>
+                <input type="text" id="gop-descripcion" class="form-control-tms" placeholder="Detalle del gasto o estación de servicio" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
             </div>
@@ -150,14 +170,24 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
           <div class="tms-modal-body">
             <div class="form-grid">
               
-              <div class="col-6 form-group">
-                <label class="form-label">Fecha *</label>
-                <input type="date" id="gad-fecha" class="form-control-tms" required>
+              <!-- Información del Gasto -->
+              <div class="col-12" style="margin-bottom: 8px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-building-fill" style="font-size: 16px;"></i>
+                    <span>INFORMACIÓN DEL GASTO</span>
+                  </h4>
+                </div>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Tipo de Gasto *</label>
-                <select id="gad-tipo" class="form-control-tms" required>
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Fecha *</label>
+                <input type="date" id="gad-fecha" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Tipo de Gasto *</label>
+                <select id="gad-tipo" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="Sueldos">Sueldos y Planilla</option>
                   <option value="Alquiler">Alquiler de Oficina / Local</option>
                   <option value="Servicios Básicos">Servicios Básicos (Luz, Agua, Internet)</option>
@@ -168,14 +198,24 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
                 </select>
               </div>
 
+              <!-- Detalle del Gasto -->
+              <div class="col-12" style="margin-bottom: 8px; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
+                  <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
+                    <i class="bi bi-receipt" style="font-size: 16px;"></i>
+                    <span>DETALLE DEL GASTO</span>
+                  </h4>
+                </div>
+              </div>
+
               <div class="col-12 form-group">
-                <label class="form-label">Descripción *</label>
-                <input type="text" id="gad-descripcion" class="form-control-tms" required placeholder="Concepto del gasto">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Descripción *</label>
+                <input type="text" id="gad-descripcion" class="form-control-tms" required placeholder="Concepto del gasto" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label">Monto (S/) *</label>
-                <input type="number" step="0.01" id="gad-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626;">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Monto (S/) *</label>
+                <input type="number" step="0.01" id="gad-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626; border: 2px solid #e2e8f0; padding: 10px 14px; background: #fee2e2;">
               </div>
 
             </div>
@@ -236,13 +276,13 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
     if (currentTab === 'operativos') {
       thead.innerHTML = `
         <tr>
-          <th>ID</th>
-          <th>Fecha</th>
-          <th>Vehículo (Placa)</th>
-          <th>Tipo de Gasto</th>
-          <th>Descripción</th>
-          <th style="text-align: right;">Monto (S/)</th>
-          <th class="no-export" style="text-align: center;">Acciones</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">ID</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Fecha</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Vehículo (Placa)</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Tipo de Gasto</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Descripción</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: right;">Monto (S/)</th>
+          <th class="no-export" style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Acciones</th>
         </tr>
       `;
 
@@ -278,12 +318,12 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
     } else {
       thead.innerHTML = `
         <tr>
-          <th>ID</th>
-          <th>Fecha</th>
-          <th>Tipo de Gasto</th>
-          <th>Descripción</th>
-          <th style="text-align: right;">Monto (S/)</th>
-          <th class="no-export" style="text-align: center;">Acciones</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">ID</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Fecha</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Tipo de Gasto</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Descripción</th>
+          <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: right;">Monto (S/)</th>
+          <th class="no-export" style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Acciones</th>
         </tr>
       `;
 
