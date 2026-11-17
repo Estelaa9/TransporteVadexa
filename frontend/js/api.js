@@ -44,7 +44,10 @@ export const api = {
         if (response.status === 401 && data.auth_required) {
           window.location.hash = '#login';
         }
-        throw new Error(data.error || data.message || `Error del servidor (${response.status})`);
+        const error = new Error(data.error || data.message || `Error del servidor (${response.status})`);
+        error.status = response.status;
+        error.data = data;
+        throw error;
       }
 
       return data;

@@ -4,6 +4,49 @@
 
 Sistema web interno para gestionar servicios de transporte y mudanzas, clientes, flota, conductores, proveedores, gastos y reportes operativos.
 
+## Actualización de correcciones y continuidad del proyecto (noviembre 2026)
+
+Durante esta fase de trabajo se estabilizó la base del sistema y se corrigió el flujo de arranque y de autenticación para que el proyecto sea usable en un entorno local con WAMP. Los cambios más relevantes fueron:
+
+- Ajuste del launcher `ABRIR_SISTEMA.bat` para detectar la ruta del proyecto, comprobar la disponibilidad del sistema y abrir la URL correcta del login y del frontend.
+- Unificación del acceso del launcher en la SPA (`frontend/#login`), evitando abrir el login PHP clásico y el frontend en pestañas separadas; actualización del identificador del router para que el navegador no reutilice la versión anterior en caché.
+- Protección de la navegación frente a contenedores ausentes y rutas inválidas, mostrando un error explícito en vez de enviar silenciosamente al usuario al dashboard.
+- Ajuste de la validación de sesión en el frontend: una sesión anónima se distingue de un fallo de servidor; el error de conexión ya no se oculta como si el usuario solo estuviera desconectado. La sesión validada se reutiliza al navegar, mientras el backend sigue verificando autenticación en cada API protegida.
+- Corrección del bootstrap de base de datos en `config/conexion.php` para crear tablas y columnas faltantes de forma compatible con bases de datos parcialmente migradas.
+- Reforzamiento del control de sesión y permisos en `require_auth()` para invalidar accesos de usuarios inactivos o sin sesión válida.
+- Corrección de la vinculación de parámetros SQL al cargar los permisos predeterminados; el usuario que audita la inserción ahora se pasa por referencia correctamente, evitando el error fatal durante `login/validar.php?action=me`.
+- Inclusión de un catálogo de módulos y soporte de acceso por usuario en `usuario_modulos`, con funciones para devolver permisos por defecto y verificar acceso por módulo.
+- Preparación del flujo de administración de usuarios y permisos mediante `usuarios/index.php` y el nuevo endpoint `usuarios/permisos.php`.
+- Registro en el enrutador SPA de todos los enlaces presentes en el menú: control operativo, cuentas por cobrar, cierre y gastos adicionales, facturas y administración de usuarios. Antes, los enlaces sin ruta asociada caían en el dashboard.
+- Conversión del formulario de servicio a un asistente de cuatro pasos: cliente/fecha, modalidad, disponibilidad de vehículo y conductor, y datos finales con resumen previo al guardado. Las unidades y los conductores ocupados en el mismo horario no se ofrecen.
+- Implementación de la administración visual de cuentas y permisos: toggles de activo/inactivo, edición de perfil y tarjetas de acceso por módulo.
+- Aplicación de los permisos seleccionados tanto en la navegación SPA como en cada endpoint protegido; el cambio de permisos se vuelve a consultar con cada petición. La administración de usuarios continúa reservada a administradores.
+- Cobertura de lectura autenticada para dashboard, operaciones, servicios, programación, clientes, flota, conductores, proveedores, gastos, reportes, facturas, cuentas y usuarios en `tests/gestion.integration.php`.
+- Validación de los 15 enlaces del menú, carga del login en Chrome headless, sintaxis de los 17 módulos JavaScript, pruebas JS y 59 comprobaciones de integración PHP.
+
+### Archivos clave modificados
+
+- `ABRIR_SISTEMA.bat`: apertura segura de la pantalla de login SPA y visualización de la URL.
+- `config/conexion.php`: conexión, sesión, permisos y creación automática de esquema compatible.
+- `usuarios/index.php`: respuesta JSON con datos del usuario y módulos activos del usuario.
+- `usuarios/permisos.php`: gestión de permisos por módulo para cada usuario.
+- `frontend/js/router.js`, `frontend/js/modules/auth.js` y `frontend/js/api.js`: navegación SPA, gestión de sesión y manejo de errores de API.
+- `frontend/js/modules/servicios.js`: asistente multi-etapa y selección de recursos disponibles.
+- `frontend/js/modules/gestion.js`: pantalla administrativa de usuarios, estado de cuenta y toggles de permisos.
+- `frontend/css/app.css`: estilos adaptables para el asistente y la pantalla de permisos.
+- `tests/gestion.integration.php`: prueba de carga autenticada de los principales endpoints de los módulos.
+
+### Estado funcional actual
+
+El proyecto se encuentra en un estado estable para continuar el desarrollo y la sustentación. La problemática principal que generaba bloqueos operativos era la diferencia de esquema entre entornos locales y migraciones parciales; esa condición se mitigó con validaciones automáticas en arranque sin romper la lógica existente. La aplicación también quedó mejor preparada para la administración de perfiles, roles y permisos por módulo.
+
+### Recomendaciones para continuidad
+
+1. Mantener la disciplina de migraciones SQL para cada cambio de esquema.
+2. Validar el entorno local con una base de datos limpia antes de desplegar cambios importantes.
+3. En WAMP, recorrer el wizard y la administración con perfiles administrador y operador para validar el flujo visual y las restricciones según la configuración local.
+4. Repetir las pruebas automatizadas JS/PHP después de cada modificación funcional.
+
 ---
 
 ## 1. Tecnologías utilizadas

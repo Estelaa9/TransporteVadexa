@@ -15,7 +15,8 @@ if ($action === 'check' || $action === 'me') {
             "user" => [
                 "usuario" => $_SESSION['usuario'],
                 "nombre" => $_SESSION['nombre'] ?? $_SESSION['usuario'],
-                "rol" => $_SESSION['rol'] ?? 'usuario'
+                "rol" => $_SESSION['rol'] ?? 'usuario',
+                "module_access" => $_SESSION['module_access'] ?? []
             ]
         ]);
     } else {
@@ -23,7 +24,7 @@ if ($action === 'check' || $action === 'me') {
             "success" => false,
             "logged_in" => false,
             "error" => "No hay sesión activa."
-        ], 401);
+        ]);
     }
 }
 

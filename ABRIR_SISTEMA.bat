@@ -1,28 +1,41 @@
 @echo off
 setlocal
+chcp 65001 >nul
+
 title VADEXSA LOGISTIC - Iniciando Sistema
+
 echo ========================================================
 echo   Iniciando VADEXSA LOGISTIC - Modulo Web Frontend
 echo ========================================================
 echo.
 for %%I in ("%~dp0.") do set "PROJECT_NAME=%%~nxI"
-set "SYSTEM_URL=http://localhost/%PROJECT_NAME%/frontend/"
+set "APP_URL=http://localhost/%PROJECT_NAME%/frontend/#login"
+set "HEALTH_URL=http://localhost/%PROJECT_NAME%/frontend/"
 
-echo Comprobando que el servidor web este disponible...
-powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; try { $response = Invoke-WebRequest -Uri '%SYSTEM_URL%' -TimeoutSec 5 -UseBasicParsing; if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 400) { exit 1 } } catch { exit 1 }" >nul 2>&1
+ping -n 2 127.0.0.1 >nul
+
+echo Verificando que el sistema este disponible...
+powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri '%HEALTH_URL%' -TimeoutSec 5 -UseBasicParsing; if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 400) { exit 0 } } catch {}; exit 1" >nul 2>&1
 if errorlevel 1 (
-    echo No se pudo acceder a %SYSTEM_URL%
-    echo Inicie Apache en WampServer y vuelva a ejecutar este archivo.
+    echo.
+    echo No se pudo acceder a la URL web del sistema.
+    echo Verifica que WampServer y Apache esten activos.
+    echo Ruta esperada: %HEALTH_URL%
+    echo.
     pause
     exit /b 1
 )
 
-echo Abriendo el navegador en la ruta del frontend...
-echo Ruta: %SYSTEM_URL%
 echo.
-start "" "%SYSTEM_URL%"
+echo URL del sistema:
+echo %APP_URL%
+echo.
+echo Abriendo el navegador en la pantalla de acceso...
+start "" "%APP_URL%"
 if errorlevel 1 (
-    echo No se pudo abrir el navegador.
+    echo No se pudo abrir el navegador automaticamente.
+    echo Copia esta URL manualmente en tu navegador:
+    echo %APP_URL%
     pause
     exit /b 1
 )

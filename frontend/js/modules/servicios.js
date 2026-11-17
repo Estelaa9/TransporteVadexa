@@ -7,6 +7,9 @@ export async function renderServicios(container) {
   let clientesList = [];
   let vehiculosList = [];
   let conductoresList = [];
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[char]));
 
   container.innerHTML = `
     <div class="page-title-box">
@@ -92,9 +95,17 @@ export async function renderServicios(container) {
           </div>
           <button class="tms-modal-close" id="btn-close-modal-servicio">&times;</button>
         </div>
-        <form id="form-servicio">
+        <form id="form-servicio" novalidate>
           <input type="hidden" id="srv-id" name="id">
+          <div class="srv-wizard-progress" id="srv-wizard-progress" aria-label="Pasos del registro de servicio">
+            <div class="srv-wizard-step active" data-step-indicator="1"><span>1</span><strong>Cliente</strong></div>
+            <div class="srv-wizard-step" data-step-indicator="2"><span>2</span><strong>Modalidad</strong></div>
+            <div class="srv-wizard-step" data-step-indicator="3"><span>3</span><strong>Asignación</strong></div>
+            <div class="srv-wizard-step" data-step-indicator="4"><span>4</span><strong>Confirmación</strong></div>
+          </div>
           <div class="tms-modal-body">
+            <p id="srv-wizard-help" class="srv-wizard-help" role="status"></p>
+            <div id="srv-wizard-review" class="srv-wizard-review" hidden></div>
             <div class="form-grid">
               
               <div class="col-3 form-group">
@@ -236,7 +247,9 @@ export async function renderServicios(container) {
           </div>
           <div class="tms-modal-footer">
             <button type="button" class="btn-tms btn-tms-default" id="btn-cancel-modal-servicio">Cancelar</button>
-            <button type="submit" class="btn-tms btn-tms-primary" id="btn-guardar-servicio">
+            <button type="button" class="btn-tms btn-tms-default" id="btn-servicio-anterior">Anterior</button>
+            <button type="button" class="btn-tms btn-tms-primary" id="btn-servicio-siguiente">Siguiente</button>
+            <button type="submit" class="btn-tms btn-tms-primary" id="btn-guardar-servicio" hidden>
               <i class="bi bi-save"></i> Guardar Servicio
             </button>
           </div>
@@ -257,6 +270,94 @@ export async function renderServicios(container) {
   const facturaInput = document.getElementById('srv-factura');
   const modalidadSelect = document.getElementById('srv-modalidad');
   const guiaTransInput = document.getElementById('srv-guia-trans');
+  const wizardSteps = 4;
+  let wizardStep = 1;
+  let editingServiceId = '';
+
+  function getFieldContainer(id) {
+    return document.getElementById(id)?.closest('.form-group');
+  }
+
+  const wizardFields = {
+    1: ['srv-fecha', 'srv-hora', 'srv-cliente'],
+    2: ['srv-modalidad'],
+    3: ['srv-vehiculo', 'srv-conductor']
+  };
+  const wizardContainers = new Map();
+  for (const [step, fieldIds] of Object.entries(wizardFields)) {
+    for (const id of fieldIds) {
+      const fieldContainer = getFieldContainer(id);
+      if (fieldContainer) wizardContainers.set(fieldContainer, Number(step));
+    }
+  }
+
+  function renderWizardReview() {
+    const values = [
+      ['Cliente', document.getElementById('srv-cliente').selectedOptions[0]?.textContent],
+      ['Modalidad', modalidadSelect.selectedOptions[0]?.textContent],
+      ['Vehículo', document.getElementById('srv-vehiculo').selectedOptions[0]?.textContent],
+      ['Conductor', document.getElementById('srv-conductor').selectedOptions[0]?.textContent],
+      ['Servicio', document.getElementById('srv-tipo-servicio').value],
+      ['Ruta', `${document.getElementById('srv-origen').value || '—'} → ${document.getElementById('srv-destino').value || '—'}`],
+      ['Fecha y hora', `${document.getElementById('srv-fecha').value || '—'} ${document.getElementById('srv-hora').value || ''}`],
+      ['Total', fmt.moneda(precioInput.value)]
+    ];
+    document.getElementById('srv-wizard-review').innerHTML = `
+      <strong>Resumen del servicio</strong>
+      <dl>${values.map(([label, value]) => `<div><dt>${label}</dt><dd>${String(value || '—').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}</dd></div>`).join('')}</dl>`;
+  }
+
+  function setWizardStep(step) {
+    wizardStep = Math.min(wizardSteps, Math.max(1, step));
+    for (const [fieldContainer, fieldStep] of wizardContainers) {
+      fieldContainer.hidden = fieldStep !== wizardStep;
+    }
+    document.querySelectorAll('#srv-wizard-progress [data-step-indicator]').forEach(indicator => {
+      const number = Number(indicator.dataset.stepIndicator);
+      indicator.classList.toggle('active', number === wizardStep);
+      indicator.classList.toggle('complete', number < wizardStep);
+      indicator.setAttribute('aria-current', number === wizardStep ? 'step' : 'false');
+    });
+    document.getElementById('btn-servicio-anterior').hidden = wizardStep === 1;
+    document.getElementById('btn-servicio-siguiente').hidden = wizardStep === wizardSteps;
+    document.getElementById('btn-guardar-servicio').hidden = wizardStep !== wizardSteps;
+    document.getElementById('srv-wizard-help').textContent = [
+      'Paso 1 de 4: seleccione el cliente y programe fecha y hora.',
+      'Paso 2 de 4: indique si utilizará flota propia o un servicio tercerizado.',
+      'Paso 3 de 4: seleccione un vehículo y un conductor disponibles para ese horario.',
+      'Paso 4 de 4: complete la ruta, los importes y los datos de facturación.'
+    ][wizardStep - 1];
+    if (wizardStep === wizardSteps) renderWizardReview();
+  }
+
+  function renderAssignmentOptions() {
+    const vehicleSelect = document.getElementById('srv-vehiculo');
+    const driverSelect = document.getElementById('srv-conductor');
+    const selectedVehicle = vehicleSelect.value;
+    const selectedDriver = driverSelect.value;
+    const date = document.getElementById('srv-fecha').value;
+    const time = document.getElementById('srv-hora').value.slice(0, 5);
+    const busy = allServicios.filter(service =>
+      String(service.id) !== String(editingServiceId) &&
+      service.fecha_servicio === date &&
+      String(service.hora_servicio || '').slice(0, 5) === time &&
+      service.estado_servicio !== 'cancelado'
+    );
+    const availableVehicles = vehiculosList.filter(vehicle =>
+      String(vehicle.estado || 'activo').toLowerCase() === 'activo' &&
+      (!busy.some(service => String(service.vehiculo_id) === String(vehicle.id)) || String(vehicle.id) === selectedVehicle)
+    );
+    const availableDrivers = conductoresList.filter(driver =>
+      String(driver.estado || 'activo').toLowerCase() === 'activo' &&
+      (!busy.some(service => String(service.conductor_id) === String(driver.id)) || String(driver.id) === selectedDriver)
+    );
+    vehicleSelect.innerHTML = '<option value="">Seleccione un vehículo disponible</option>' +
+      availableVehicles.map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.placa)} - ${escapeHtml(vehicle.modelo || vehicle.tipo || 'Unidad')}</option>`).join('');
+    driverSelect.innerHTML = '<option value="">Seleccione un conductor disponible</option>' +
+      availableDrivers.map(driver => `<option value="${escapeHtml(driver.id)}">${escapeHtml(driver.nombre)}</option>`).join('');
+    if (availableVehicles.some(vehicle => String(vehicle.id) === selectedVehicle)) vehicleSelect.value = selectedVehicle;
+    if (availableDrivers.some(driver => String(driver.id) === selectedDriver)) driverSelect.value = selectedDriver;
+  }
 
   function calcularIGV() {
     const monto = parseFloat(precioInput.value) || 0;
@@ -302,17 +403,12 @@ export async function renderServicios(container) {
 
       const clienteSel = document.getElementById('srv-cliente');
       clienteSel.innerHTML = '<option value="">Seleccione un cliente</option>' +
-        clientesList.map(c => `<option value="${c.id}">${c.nombre} (${c.documento || c.tipo_cliente})</option>`).join('');
+        clientesList.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.nombre)} (${escapeHtml(c.documento || c.tipo_cliente)})</option>`).join('');
 
-      const vehiculoSel = document.getElementById('srv-vehiculo');
-      vehiculoSel.innerHTML = '<option value="">Seleccione un vehículo</option>' +
-        vehiculosList.map(v => `<option value="${v.id}">${v.placa} - ${v.modelo || v.tipo}</option>`).join('');
-
-      const conductorSel = document.getElementById('srv-conductor');
-      conductorSel.innerHTML = '<option value="">Seleccione un conductor</option>' +
-        conductoresList.map(co => `<option value="${co.id}">${co.nombre}</option>`).join('');
+      renderAssignmentOptions();
     } catch (e) {
-      console.warn('Error cargando listas:', e);
+      showToast(`No se pudieron cargar clientes, vehículos y conductores: ${e.message}`, 'error');
+      throw e;
     }
   }
 
@@ -325,6 +421,7 @@ export async function renderServicios(container) {
         renderTable();
       }
     } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="14" role="alert" style="text-align:center;padding:25px;color:#991b1b;">${err.message}</td></tr>`;
       showToast(err.message || 'Error al cargar servicios', 'error');
     }
   }
@@ -439,10 +536,12 @@ export async function renderServicios(container) {
   async function openNewModal() {
     form.reset();
     document.getElementById('srv-id').value = '';
+    editingServiceId = '';
     document.getElementById('modal-servicio-titulo').innerHTML = `<i class="bi bi-truck"></i> Registrar Nuevo Servicio`;
     document.getElementById('srv-fecha').value = new Date().toISOString().split('T')[0];
     document.getElementById('srv-hora').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
     costoInput.disabled = true;
+    renderAssignmentOptions();
 
     try {
       const res = await api.get('servicios/correlativo.php', { tipo_comprobante: 'FACTURA' });
@@ -453,6 +552,7 @@ export async function renderServicios(container) {
     } catch (e) {}
 
     calcularIGV();
+    setWizardStep(1);
     modal.classList.add('show');
   }
 
@@ -461,6 +561,7 @@ export async function renderServicios(container) {
       const res = await api.get('servicios/index.php', { action: 'get', id });
       if (res.success && res.data) {
         const s = res.data;
+        editingServiceId = String(s.id);
         document.getElementById('srv-id').value = s.id;
         document.getElementById('modal-servicio-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Servicio #${s.id}`;
         document.getElementById('srv-fecha').value = s.fecha_servicio || '';
@@ -471,6 +572,7 @@ export async function renderServicios(container) {
         document.getElementById('srv-tipo-servicio').value = s.tipo_servicio || 'Local';
         document.getElementById('srv-tipo-carga').value = s.tipo_carga || 'General';
         document.getElementById('srv-modalidad').value = s.modalidad || 'propio';
+        renderAssignmentOptions();
         document.getElementById('srv-forma-pago').value = s.forma_pago || 'Contado';
         document.getElementById('srv-origen').value = s.origen || '';
         document.getElementById('srv-destino').value = s.destino || '';
@@ -489,6 +591,7 @@ export async function renderServicios(container) {
         }
 
         calcularIGV();
+        setWizardStep(1);
         modal.classList.add('show');
       }
     } catch (err) {
@@ -496,8 +599,28 @@ export async function renderServicios(container) {
     }
   }
 
+  document.getElementById('btn-servicio-siguiente').addEventListener('click', () => {
+    const activeFields = [...wizardContainers].filter(([, step]) => step === wizardStep).map(([fieldContainer]) => fieldContainer);
+    const invalid = activeFields.flatMap(fieldContainer => [...fieldContainer.querySelectorAll('input, select, textarea')]).find(field => !field.checkValidity());
+    if (invalid) {
+      invalid.reportValidity();
+      return;
+    }
+    setWizardStep(wizardStep + 1);
+  });
+  document.getElementById('btn-servicio-anterior').addEventListener('click', () => setWizardStep(wizardStep - 1));
+  document.getElementById('srv-fecha').addEventListener('change', renderAssignmentOptions);
+  document.getElementById('srv-hora').addEventListener('change', renderAssignmentOptions);
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const invalid = [...form.querySelectorAll('input, select, textarea')].find(field => !field.disabled && !field.checkValidity());
+    if (invalid) {
+      const ownerStep = wizardContainers.get(getFieldContainer(invalid.id)) || wizardSteps;
+      setWizardStep(ownerStep);
+      invalid.reportValidity();
+      return;
+    }
     const id = document.getElementById('srv-id').value;
     const isEdit = Boolean(id);
 

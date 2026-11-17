@@ -2,26 +2,60 @@
 import { api, showToast } from '../api.js';
 
 let currentUser = null;
+const routeModules = {
+  '#dashboard': 'dashboard',
+  '#operacion': 'operacion',
+  '#servicios': 'servicios',
+  '#programacion': 'programacion',
+  '#clientes': 'clientes',
+  '#vehiculos': 'vehiculos',
+  '#conductores': 'conductores',
+  '#proveedores': 'proveedores',
+  '#gastos-operativos': 'gastos_operativos',
+  '#gastos-admin': 'gastos_administrativos',
+  '#reportes': 'reportes',
+  '#facturas': 'facturas',
+  '#cuentas': 'cuentas',
+  '#cierre': 'cierre',
+  '#usuarios': 'usuarios'
+};
 
 export const auth = {
   getUser() {
     return currentUser;
   },
 
-  async checkSession() {
+  canAccessModule(moduleName) {
+    if (!currentUser) return false;
+    const isAdmin = ['admin', 'administrador'].includes(String(currentUser.rol || '').toLowerCase());
+    if (moduleName === 'usuarios' && !isAdmin) return false;
+    if (isAdmin) return true;
+    return (currentUser.module_access || []).some(entry => entry.modulo === moduleName && entry.activo);
+  },
+
+  async checkSession(force = false) {
+    if (currentUser && !force) return currentUser;
+
+    let res;
     try {
-      const res = await api.get('login/validar.php?action=me');
-      if (res.success && res.user) {
-        currentUser = res.user;
-        this.updateUserUI(currentUser);
-        return currentUser;
-      }
+      res = await api.get('login/validar.php?action=me');
+    } catch (error) {
       currentUser = null;
-      return null;
-    } catch (e) {
+      if (error.status === 401 && error.data?.auth_required) return null;
+      throw error;
+    }
+    if (res.success && res.logged_in && res.user) {
+      currentUser = res.user;
+      this.updateUserUI(currentUser);
+      return currentUser;
+    }
+
+    if (res.logged_in === false) {
       currentUser = null;
       return null;
     }
+
+    throw new Error(res.error || 'No se pudo validar la sesión.');
   },
 
   updateUserUI(user) {
@@ -42,6 +76,10 @@ export const auth = {
     // Actualizar topbar
     const topNameEl = document.getElementById('topbar-user-name');
     if (topNameEl) topNameEl.textContent = (user.nombre || user.usuario).toUpperCase();
+    document.querySelectorAll('.sidebar-nav a[href^="#"]').forEach(link => {
+      const moduleName = routeModules[link.getAttribute('href')];
+      link.hidden = moduleName ? !this.canAccessModule(moduleName) : false;
+    });
   },
 
   renderLogin(container) {
