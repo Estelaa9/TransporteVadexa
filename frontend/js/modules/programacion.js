@@ -11,6 +11,7 @@ export async function renderProgramacion(container) {
         <span class="page-title-sub">Gestión de despachos y estado de rutas en tiempo real</span>
       </div>
       <div class="d-flex align-items-center gap-2">
+        <button id="btn-prog-alertas" class="btn-tms btn-tms-default" type="button"><i class="bi bi-bell"></i> Activar avisos de salida</button>
         <label class="form-label mb-0" style="font-weight: 600;">Fecha:</label>
         <input type="date" id="prog-fecha-filtro" class="form-control-tms" value="${selectedDate}" style="width: 160px;">
         <button id="btn-prog-hoy" class="btn-tms btn-tms-default">Hoy</button>
@@ -89,6 +90,34 @@ export async function renderProgramacion(container) {
 
   const dateInput = document.getElementById('prog-fecha-filtro');
   const tbody = document.getElementById('tbody-programacion');
+
+  async function avisarSalidas() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      const currentDate = new Date();
+      const today = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+      const response = await api.get('servicios/programacion.php', { json: 1, fecha: today });
+      const now = new Date();
+      for (const service of response.data || []) {
+        if (service.estado_servicio !== 'programado' || !service.hora_servicio) continue;
+        const [hour, minute] = service.hora_servicio.split(':').map(Number);
+        const departure = new Date(); departure.setHours(hour, minute, 0, 0);
+        const key = `vadexa-salida-${departure.toDateString()}-${service.id}`;
+        if (departure <= now && departure >= new Date(now.getTime() - 60000) && !localStorage.getItem(key)) {
+          new Notification(`Hora de salida · Servicio #${service.id}`, { body: `${service.cliente || 'Cliente'} · ${service.placa || 'Vehículo'} · ${service.origen} → ${service.destino}` });
+          localStorage.setItem(key, '1');
+        }
+      }
+    } catch (error) { console.warn('No se pudo revisar la hora de salida', error); }
+  }
+  document.getElementById('btn-prog-alertas').addEventListener('click', async () => {
+    if (!('Notification' in window)) { showToast('Este navegador no permite notificaciones.', 'warning'); return; }
+    const permission = await Notification.requestPermission();
+    showToast(permission === 'granted' ? 'Avisos de salida activados mientras esta pantalla esté abierta.' : 'No se habilitaron los avisos.', permission === 'granted' ? 'success' : 'warning');
+    avisarSalidas();
+  });
+  const alertTimer = window.setInterval(avisarSalidas, 30000);
+  window.addEventListener('hashchange', () => window.clearInterval(alertTimer), { once: true });
 
   async function loadProgramacion() {
     selectedDate = dateInput.value;
@@ -180,4 +209,5 @@ export async function renderProgramacion(container) {
   });
 
   await loadProgramacion();
+  avisarSalidas();
 }

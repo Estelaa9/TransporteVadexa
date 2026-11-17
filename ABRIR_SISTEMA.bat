@@ -1,14 +1,36 @@
 @echo off
+setlocal
+chcp 65001 >nul
+
 title VADEXSA LOGISTIC - Iniciando Sistema
+
 echo ========================================================
 echo   Iniciando VADEXSA LOGISTIC - Modulo Web Frontend
 echo ========================================================
 echo.
-echo Abriendo el navegador en la ruta del frontend...
-echo Ruta: http://localhost/TransporteVadexa/frontend/
+for %%I in ("%~dp0.") do set "PROJECT_NAME=%%~nxI"
+set "APP_URL=http://localhost/%PROJECT_NAME%/frontend/#login"
+set "HEALTH_URL=http://localhost/%PROJECT_NAME%/frontend/"
+
+ping -n 2 127.0.0.1 >nul
+
+echo Verificando que el sistema este disponible...
+powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri '%HEALTH_URL%' -TimeoutSec 5 -UseBasicParsing; if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 400) { exit 0 } } catch {}; exit 1" >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo No se pudo acceder a la URL web del sistema.
+    echo Verifica que WampServer y Apache esten activos.
+    echo Ruta esperada: %HEALTH_URL%
+    echo.
+    pause
+    exit /b 1
+)
+
+echo.
+echo URL del sistema:
+echo %APP_URL%
 echo.
 start http://localhost/TransporteVadexa/frontend/
 
 echo Sistema ejecutado con exito.
-timeout /t 3 >nul
-exit
+exit /b 0

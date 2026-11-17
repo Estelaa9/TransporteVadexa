@@ -1,19 +1,22 @@
 // frontend/js/router.js - Enrutador dinámico SPA para Transporte Vadexa
-import { auth } from './modules/auth.js';
-import { renderDashboard } from './modules/dashboard.js?v=3.1';
-import { renderServicios } from './modules/servicios.js?v=3.1';
+import { auth } from './modules/auth.js?v=20261112-permissions-2';
+import { renderDashboard } from './modules/dashboard.js';
+import { renderServicios } from './modules/servicios.js?v=20261112-wizard-2';
 import { renderProgramacion } from './modules/programacion.js';
-import { renderClientes } from './modules/clientes.js?v=3.1';
-import { renderVehiculos } from './modules/vehiculos.js?v=3.1';
-import { renderConductores } from './modules/conductores.js?v=3.1';
-import { renderProveedores } from './modules/proveedores.js?v=3.1';
-import { renderGastos } from './modules/gastos.js?v=3.1';
+import { renderClientes } from './modules/clientes.js';
+import { renderVehiculos } from './modules/vehiculos.js';
+import { renderConductores } from './modules/conductores.js';
+import { renderProveedores } from './modules/proveedores.js';
+import { renderGastos } from './modules/gastos.js';
 import { renderReportes } from './modules/reportes.js';
+import { renderFacturas } from './modules/facturas.js';
+import { renderCuentas } from './modules/cuentas.js';
+import { renderOperacion, renderCierre, renderUsuarios } from './modules/gestion.js?v=20261112-permissions-2';
 import { initChatbot } from './modules/chatbot.js';
-import { renderMisServicios, renderProgramacion as renderProgramacionCliente, renderMisReportes } from './modules/portal-cliente.js?v=1.0';
 
 const routes = {
   '#dashboard': renderDashboard,
+  '#operacion': renderOperacion,
   '#servicios': renderServicios,
   '#programacion': renderProgramacion,
   '#clientes': renderClientes,
@@ -23,16 +26,20 @@ const routes = {
   '#gastos-operativos': (c) => renderGastos(c, 'operativos'),
   '#gastos-admin': (c) => renderGastos(c, 'administrativos'),
   '#reportes': renderReportes,
-  // Rutas del portal del cliente
-  '#portal-servicios': renderMisServicios,
-  '#portal-programacion': renderProgramacionCliente,
-  '#portal-reportes': renderMisReportes,
+  '#facturas': renderFacturas,
+  '#cuentas': renderCuentas,
+  '#cierre': renderCierre,
+  '#usuarios': renderUsuarios,
   '#login': (c) => auth.renderLogin(c),
   '#logout': () => auth.logout(),
 };
 
 export async function initRouter() {
   const container = document.getElementById('tms-content-container');
+  if (!container) {
+    throw new Error('No se encontró el contenedor principal de módulos.');
+  }
+  let navigationId = 0;
   initChatbot();
 
   // Sidebar toggle
@@ -56,10 +63,25 @@ export async function initRouter() {
   });
 
   async function handleRoute() {
+    const currentNavigationId = ++navigationId;
     let hash = window.location.hash || '#dashboard';
 
     // Verificar sesión
-    const user = await auth.checkSession();
+    let user;
+    try {
+      user = await auth.checkSession(true);
+    } catch (err) {
+      if (currentNavigationId !== navigationId) return;
+      console.error('No se pudo validar la sesión:', err);
+      container.innerHTML = `
+        <div role="alert" style="background:#fee2e2;border:1px solid #fecdd3;color:#991b1b;padding:20px;border-radius:8px;">
+          <h5><i class="bi bi-exclamation-octagon-fill"></i> No se pudo validar el acceso</h5>
+          <p>${err.message || 'El servidor no pudo comprobar la sesión. Verifique que WampServer y MySQL estén activos.'}</p>
+          <button class="btn-tms btn-tms-primary" type="button" onclick="window.location.reload()">Reintentar</button>
+        </div>`;
+      return;
+    }
+    if (currentNavigationId !== navigationId) return;
     
     if (!user) {
       if (hash !== '#login') {
@@ -91,11 +113,30 @@ export async function initRouter() {
 
     const routeHandler = routes[hash];
     if (routeHandler) {
+      const moduleName = {
+        '#dashboard': 'dashboard', '#operacion': 'operacion', '#servicios': 'servicios',
+        '#programacion': 'programacion', '#clientes': 'clientes', '#vehiculos': 'vehiculos',
+        '#conductores': 'conductores', '#proveedores': 'proveedores',
+        '#gastos-operativos': 'gastos_operativos', '#gastos-admin': 'gastos_administrativos',
+        '#reportes': 'reportes', '#facturas': 'facturas', '#cuentas': 'cuentas',
+        '#cierre': 'cierre', '#usuarios': 'usuarios'
+      }[hash];
+      if (moduleName && !auth.canAccessModule(moduleName)) {
+        container.innerHTML = `
+          <div role="alert" style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:20px;border-radius:8px;">
+            <h5><i class="bi bi-shield-lock-fill"></i> Acceso restringido</h5>
+            <p>Tu cuenta no tiene habilitado el módulo solicitado. Pide al administrador que revise tus permisos.</p>
+            <a class="btn-tms btn-tms-primary" href="#dashboard">Ir al dashboard</a>
+          </div>`;
+        return;
+      }
       // Limpiar contenedor y montar módulo
       container.innerHTML = `<div style="text-align: center; padding: 40px; color: #94a3b8;"><div class="spinner-border text-primary" role="status"></div><div class="mt-2">Cargando módulo...</div></div>`;
       try {
         await routeHandler(container);
+        if (currentNavigationId !== navigationId) return;
       } catch (err) {
+        if (currentNavigationId !== navigationId) return;
         console.error('Error renderizando ruta:', err);
         container.innerHTML = `
           <div style="background: #fee2e2; border: 1px solid #fecdd3; color: #991b1b; padding: 20px; border-radius: 8px;">
@@ -106,7 +147,12 @@ export async function initRouter() {
         `;
       }
     } else {
-      window.location.hash = '#dashboard';
+      container.innerHTML = `
+        <div role="alert" style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:20px;border-radius:8px;">
+          <h5><i class="bi bi-exclamation-triangle-fill"></i> Módulo no encontrado</h5>
+          <p>La ruta <code>${hash}</code> no está registrada. Vuelva al dashboard o use una opción del menú.</p>
+          <a class="btn-tms btn-tms-primary" href="#dashboard">Ir al dashboard</a>
+        </div>`;
     }
   }
 

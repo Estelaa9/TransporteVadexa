@@ -7,78 +7,83 @@ export async function renderServicios(container) {
   let clientesList = [];
   let vehiculosList = [];
   let conductoresList = [];
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[char]));
 
   container.innerHTML = `
-    <div class="page-title-box" style="background: white; padding: 20px 24px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
+    <div class="page-title-box">
       <div class="page-title-main">
-        <i class="bi bi-truck" style="color: #1e40af;"></i> Control de Servicios y Liquidaciones
-        <span class="page-title-sub" style="color: #64748b; font-weight: 400;">Operaciones de transporte, fletes y liquidación</span>
+        <i class="bi bi-truck text-primary"></i> Control de Servicios y Liquidaciones
+        <span class="page-title-sub">Operaciones de transporte, fletes y liquidación</span>
       </div>
     </div>
 
     <!-- Pestañas de navegación -->
-    <div class="tms-tabs" style="margin-bottom: 20px;">
-      <button class="tms-tab-btn active" id="tab-sin-liquidar" data-tab="sin_liquidar" style="border: 2px solid #e2e8f0; border-bottom: 3px solid #1e40af; font-weight: 600;">
+    <div class="tms-tabs">
+      <button class="tms-tab-btn active" id="tab-sin-liquidar" data-tab="sin_liquidar">
         <i class="bi bi-hourglass-split"></i> Viajes sin liquidar
       </button>
-      <button class="tms-tab-btn" id="tab-liquidaciones" data-tab="liquidaciones" style="border: 2px solid #e2e8f0; font-weight: 600;">
+      <button class="tms-tab-btn" id="tab-liquidaciones" data-tab="liquidaciones">
         <i class="bi bi-check2-all"></i> Liquidaciones y Finalizados
       </button>
     </div>
 
     <!-- Barra de herramientas empresarial -->
-    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-      <div style="display: flex; gap: 10px;">
-        <button id="btn-servicios-refresh" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
+    <div class="tms-toolbar">
+      <div class="toolbar-group-left">
+        <button id="btn-servicios-refresh" class="btn-tms btn-tms-default">
           <i class="bi bi-arrow-clockwise"></i> Actualizar
         </button>
-        <button id="btn-servicios-nuevo" class="btn-tms btn-tms-primary" style="border: 2px solid #1e40af; padding: 8px 16px; font-weight: 600; background: #1e40af; color: white;">
+        <button id="btn-servicios-nuevo" class="btn-tms btn-tms-primary">
           <i class="bi bi-plus-circle"></i> Nuevo Servicio
         </button>
-        <button id="btn-servicios-imprimir" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
+        <button id="btn-servicios-imprimir" class="btn-tms btn-tms-default">
           <i class="bi bi-printer"></i> Imprimir
         </button>
-        <button id="btn-servicios-excel" class="btn-tms btn-tms-default" style="border: 2px solid #e2e8f0; padding: 8px 14px; font-weight: 600;">
+        <button id="btn-servicios-excel" class="btn-tms btn-tms-default">
           <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <label style="color: #64748b; font-size: 13px; font-weight: 600;"><i class="bi bi-search"></i> Buscar:</label>
-        <input type="text" id="search-servicios" style="border: 2px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; width: 280px; font-size: 13px;" placeholder="Cliente, placa, guía...">
+      <div class="toolbar-group-right">
+        <div class="search-table-box">
+          <label><i class="bi bi-search"></i> Buscar:</label>
+          <input type="text" id="search-servicios" class="search-table-input" placeholder="Cliente, placa, guía...">
+        </div>
       </div>
     </div>
 
     <!-- Contenedor de la Tabla -->
-    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-      <table class="tms-table" id="tabla-servicios-main" style="margin: 0;">
-        <thead style="background: #f8fafc;">
+    <div class="tms-table-container">
+      <table class="tms-table" id="tabla-servicios-main">
+        <thead>
           <tr>
-            <th style="width: 30px; text-align: center; padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;"><input type="checkbox" id="check-all-servicios"></th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">ID</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Fecha / Hora</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Cliente</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Vehículo</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Conductor</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Origen → Destino</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">G. Remitente</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">G. Transportista</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Comprobante</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: right;">Monto</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: right;">Utilidad</th>
-            <th style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Estado</th>
-            <th class="no-export" style="padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; text-align: center;">Acciones</th>
+            <th style="width: 30px; text-align: center;"><input type="checkbox" id="check-all-servicios"></th>
+            <th>ID</th>
+            <th>Fecha / Hora</th>
+            <th>Cliente</th>
+            <th>Vehículo</th>
+            <th>Conductor</th>
+            <th>Origen → Destino</th>
+            <th>G. Remitente</th>
+            <th>G. Transportista</th>
+            <th>Comprobante</th>
+            <th style="text-align: right;">Monto (S/)</th>
+            <th style="text-align: right;">Utilidad (S/)</th>
+            <th style="text-align: center;">Estado</th>
+            <th class="no-export" style="text-align: center;">Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-servicios">
-          <tr><td colspan="14" style="text-align: center; padding: 40px 25px; color: #94a3b8;">Cargando servicios...</td></tr>
+          <tr><td colspan="14" style="text-align: center; padding: 25px; color: #94a3b8;">Cargando servicios...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 0 4px;">
-      <div id="servicios-contador" style="font-size: 13px; color: #64748b; font-weight: 600;">Mostrando 0 servicios</div>
-      <div id="servicios-total-monto" style="font-weight: 700; color: #0f172a; font-size: 15px;">Total: S/ 0.00</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: #64748b;">
+      <div id="servicios-contador">Mostrando 0 servicios</div>
+      <div id="servicios-total-monto" style="font-weight: 700; color: #1e293b; font-size: 13px;">Total: S/ 0.00</div>
     </div>
 
     <!-- Modal para Crear / Editar Servicio -->
@@ -90,63 +95,53 @@ export async function renderServicios(container) {
           </div>
           <button class="tms-modal-close" id="btn-close-modal-servicio">&times;</button>
         </div>
-        <form id="form-servicio">
+        <form id="form-servicio" novalidate>
           <input type="hidden" id="srv-id" name="id">
-          <div class="tms-modal-body" style="max-height: 70vh; overflow-y: auto; padding: 24px;">
-            
-            <!-- SECCIÓN 1: ASIGNACIÓN DE RECURSOS -->
-            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
-              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
-                <i class="bi bi-truck-flatbed" style="font-size: 16px;"></i>
-                <span>ASIGNACIÓN DE RECURSOS</span>
-              </h4>
-              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Vehículo, cliente y conductor asignados al servicio</p>
-            </div>
-
-            <div class="form-grid" style="margin-bottom: 28px;">
-              <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-truck" style="color: #1e40af;"></i> Vehículo (Placa) <span style="color: #dc2626;">*</span>
-                </label>
-                <select id="srv-vehiculo" name="vehiculo_id" class="form-control-tms" required style="font-weight: 600; color: #1e40af; border: 2px solid #e2e8f0;">
-                  <option value="">Seleccione un vehículo</option>
-                </select>
+          <div class="srv-wizard-progress" id="srv-wizard-progress" aria-label="Pasos del registro de servicio">
+            <div class="srv-wizard-step active" data-step-indicator="1"><span>1</span><strong>Cliente</strong></div>
+            <div class="srv-wizard-step" data-step-indicator="2"><span>2</span><strong>Modalidad</strong></div>
+            <div class="srv-wizard-step" data-step-indicator="3"><span>3</span><strong>Asignación</strong></div>
+            <div class="srv-wizard-step" data-step-indicator="4"><span>4</span><strong>Confirmación</strong></div>
+          </div>
+          <div class="tms-modal-body">
+            <p id="srv-wizard-help" class="srv-wizard-help" role="status"></p>
+            <div id="srv-wizard-review" class="srv-wizard-review" hidden></div>
+            <div class="form-grid">
+              
+              <div class="col-3 form-group">
+                <label class="form-label">Fecha del Servicio *</label>
+                <input type="date" id="srv-fecha" name="fecha_servicio" class="form-control-tms" required>
               </div>
 
-              <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-building" style="color: #1e40af;"></i> Cliente <span style="color: #dc2626;">*</span>
-                </label>
-                <select id="srv-cliente" name="cliente_id" class="form-control-tms" required style="font-weight: 600; border: 2px solid #e2e8f0;">
+              <div class="col-3 form-group">
+                <label class="form-label">Hora</label>
+                <input type="time" id="srv-hora" name="hora_servicio" class="form-control-tms">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label">Cliente *</label>
+                <select id="srv-cliente" name="cliente_id" class="form-control-tms" required>
                   <option value="">Seleccione un cliente</option>
                 </select>
               </div>
 
-              <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-person-badge" style="color: #1e40af;"></i> Conductor <span style="color: #dc2626;">*</span>
-                </label>
-                <select id="srv-conductor" name="conductor_id" class="form-control-tms" required style="font-weight: 500; border: 2px solid #e2e8f0;">
+              <div class="col-6 form-group">
+                <label class="form-label">Vehículo *</label>
+                <select id="srv-vehiculo" name="vehiculo_id" class="form-control-tms" required>
+                  <option value="">Seleccione un vehículo</option>
+                </select>
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label">Conductor *</label>
+                <select id="srv-conductor" name="conductor_id" class="form-control-tms" required>
                   <option value="">Seleccione un conductor</option>
                 </select>
               </div>
-            </div>
 
-            <!-- SECCIÓN 2: DETALLES DEL SERVICIO -->
-            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
-              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
-                <i class="bi bi-box-seam" style="font-size: 16px;"></i>
-                <span>DETALLES DEL SERVICIO</span>
-              </h4>
-              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Tipo de servicio, carga, modalidad y forma de pago</p>
-            </div>
-
-            <div class="form-grid" style="margin-bottom: 28px;">
               <div class="col-3 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-tags" style="color: #1e40af;"></i> Tipo Servicio
-                </label>
-                <select id="srv-tipo-servicio" name="tipo_servicio" class="form-control-tms" style="border: 2px solid #e2e8f0;">
+                <label class="form-label">Tipo Servicio</label>
+                <select id="srv-tipo-servicio" name="tipo_servicio" class="form-control-tms">
                   <option value="Local">Local</option>
                   <option value="Provincia">Provincia</option>
                   <option value="Mudanza">Mudanza</option>
@@ -156,10 +151,8 @@ export async function renderServicios(container) {
               </div>
 
               <div class="col-3 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-box" style="color: #1e40af;"></i> Tipo Carga
-                </label>
-                <select id="srv-tipo-carga" name="tipo_carga" class="form-control-tms" style="border: 2px solid #e2e8f0;">
+                <label class="form-label">Tipo Carga</label>
+                <select id="srv-tipo-carga" name="tipo_carga" class="form-control-tms">
                   <option value="General">General</option>
                   <option value="Frágil">Frágil</option>
                   <option value="Refrigerada">Refrigerada</option>
@@ -169,83 +162,46 @@ export async function renderServicios(container) {
               </div>
 
               <div class="col-3 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-shield-check" style="color: #1e40af;"></i> Modalidad <span style="color: #dc2626;">*</span>
-                </label>
-                <select id="srv-modalidad" name="modalidad" class="form-control-tms" required style="border: 2px solid #e2e8f0;">
+                <label class="form-label">Modalidad *</label>
+                <select id="srv-modalidad" name="modalidad" class="form-control-tms" required>
                   <option value="propio">Propio (Flota)</option>
                   <option value="tercerizado">Tercerizado</option>
                 </select>
               </div>
 
               <div class="col-3 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-credit-card" style="color: #1e40af;"></i> Forma de Pago
-                </label>
-                <select id="srv-forma-pago" name="forma_pago" class="form-control-tms" style="border: 2px solid #e2e8f0;">
+                <label class="form-label">Forma de Pago</label>
+                <select id="srv-forma-pago" name="forma_pago" class="form-control-tms">
                   <option value="Contado">Contado</option>
                   <option value="Crédito 15 días">Crédito 15 días</option>
                   <option value="Crédito 30 días">Crédito 30 días</option>
                   <option value="Contra entrega">Contra entrega</option>
                 </select>
               </div>
-            </div>
 
-            <!-- SECCIÓN 3: RUTA DEL SERVICIO -->
-            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
-              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
-                <i class="bi bi-map" style="font-size: 16px;"></i>
-                <span>RUTA DEL SERVICIO</span>
-              </h4>
-              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Punto de origen y destino del transporte</p>
-            </div>
-
-            <div class="form-grid" style="margin-bottom: 28px;">
               <div class="col-6 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-geo-alt" style="color: #1e40af;"></i> Origen <span style="color: #dc2626;">*</span>
-                </label>
-                <input type="text" id="srv-origen" name="origen" class="form-control-tms" placeholder="Dirección / Almacén / Distrito Origen" required style="border: 2px solid #e2e8f0;">
+                <label class="form-label">Origen *</label>
+                <input type="text" id="srv-origen" name="origen" class="form-control-tms" placeholder="Dirección / Almacén Origen" required>
               </div>
 
               <div class="col-6 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-geo-alt-fill" style="color: #1e40af;"></i> Destino <span style="color: #dc2626;">*</span>
-                </label>
-                <input type="text" id="srv-destino" name="destino" class="form-control-tms" placeholder="Dirección / Distrito Destino" required style="border: 2px solid #e2e8f0;">
-              </div>
-            </div>
-
-            <!-- SECCIÓN 4: INFORMACIÓN FINANCIERA -->
-            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
-              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
-                <i class="bi bi-currency-dollar" style="font-size: 16px;"></i>
-                <span>INFORMACIÓN FINANCIERA</span>
-              </h4>
-              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Precios, costos, IGV y comprobantes</p>
-            </div>
-
-            <div class="form-grid" style="margin-bottom: 28px;">
-              <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-cash-coin" style="color: #16a34a;"></i> Precio Cliente (S/) <span style="color: #dc2626;">*</span>
-                </label>
-                <input type="number" step="0.01" id="srv-precio-cliente" name="precio_cliente" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #16a34a; font-size: 15px; border: 2px solid #bbf7d0; background: #f0fdf4;">
+                <label class="form-label">Destino *</label>
+                <input type="text" id="srv-destino" name="destino" class="form-control-tms" placeholder="Dirección Destino" required>
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-wallet2" style="color: #dc2626;"></i> Costo Proveedor (S/)
-                </label>
-                <input type="number" step="0.01" id="srv-costo-proveedor" name="costo_proveedor" class="form-control-tms" placeholder="0.00" disabled style="font-weight: 600; color: #dc2626; border: 2px solid #fecaca; background: #fef2f2;">
-                <small style="color: #64748b; font-size: 10px; display: block; margin-top: 4px;">Solo si es Tercerizado</small>
+                <label class="form-label">Precio Cliente (S/) *</label>
+                <input type="number" step="0.01" id="srv-precio-cliente" name="precio_cliente" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #1e293b;">
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-receipt" style="color: #1e40af;"></i> Tipo Comprobante <span style="color: #dc2626;">*</span>
-                </label>
-                <select id="srv-tipo-comprobante" name="tipo_comprobante" class="form-control-tms" style="border: 2px solid #e2e8f0;">
+                <label class="form-label">Costo Proveedor (S/)</label>
+                <input type="number" step="0.01" id="srv-costo-proveedor" name="costo_proveedor" class="form-control-tms" placeholder="0.00" disabled>
+              </div>
+
+              <div class="col-4 form-group">
+                <label class="form-label">Comprobante *</label>
+                <select id="srv-tipo-comprobante" name="tipo_comprobante" class="form-control-tms">
                   <option value="FACTURA">FACTURA</option>
                   <option value="BOLETA">BOLETA</option>
                   <option value="SIN_COMPROBANTE">SIN COMPROBANTE</option>
@@ -253,96 +209,47 @@ export async function renderServicios(container) {
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-calculator" style="color: #64748b;"></i> Base Imponible (S/)
-                </label>
-                <input type="text" id="srv-base" name="base_imponible" class="form-control-tms" readonly style="background: #f8fafc; border: 2px solid #e2e8f0; font-weight: 600; color: #475569;">
+                <label class="form-label">Base Imponible (S/)</label>
+                <input type="text" id="srv-base" name="base_imponible" class="form-control-tms" readonly>
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-percent" style="color: #64748b;"></i> IGV 18% (S/)
-                </label>
-                <input type="text" id="srv-igv" name="igv" class="form-control-tms" readonly style="background: #f8fafc; border: 2px solid #e2e8f0; font-weight: 600; color: #475569;">
+                <label class="form-label">IGV (18%)</label>
+                <input type="text" id="srv-igv" name="igv" class="form-control-tms" readonly>
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-hash" style="color: #0284c7;"></i> N° Factura / Boleta
-                </label>
-                <input type="text" id="srv-factura" name="numero_factura" class="form-control-tms" placeholder="Generado automático" style="font-weight: 600; color: #0284c7; border: 2px solid #e0f2fe; background: #f0f9ff;">
-              </div>
-            </div>
-
-            <!-- SECCIÓN 5: GUÍAS Y DOCUMENTACIÓN -->
-            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
-              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
-                <i class="bi bi-file-text" style="font-size: 16px;"></i>
-                <span>GUÍAS Y DOCUMENTACIÓN</span>
-              </h4>
-              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Guías de remisión y transporte</p>
-            </div>
-
-            <div class="form-grid" style="margin-bottom: 28px;">
-              <div class="col-6 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-file-earmark-text" style="color: #1e40af;"></i> Guía Remitente
-                </label>
-                <input type="text" id="srv-guia-rem" name="guia_remitente" class="form-control-tms" placeholder="T001-XXXXXX" style="font-weight: 600; border: 2px solid #e2e8f0;">
+                <label class="form-label">N° Factura / Boleta</label>
+                <input type="text" id="srv-factura" name="numero_factura" class="form-control-tms" placeholder="Generado automático">
               </div>
 
-              <div class="col-6 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-file-earmark-check" style="color: #0284c7;"></i> Guía Transportista
-                </label>
-                <input type="text" id="srv-guia-trans" name="guia_transportista" class="form-control-tms" placeholder="GRT-XXXXXX" readonly style="background: #f0f9ff; font-weight: 700; color: #0284c7; border: 2px solid #e0f2fe;">
-                <small style="color: #64748b; font-size: 10px; display: block; margin-top: 4px;">Generado automáticamente</small>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 6: INFORMACIÓN DEL SERVICIO -->
-            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; color: white; box-shadow: 0 2px 4px rgba(30,58,138,0.15);">
-              <h4 style="margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;">
-                <i class="bi bi-calendar3" style="font-size: 16px;"></i>
-                <span>INFORMACIÓN DEL SERVICIO</span>
-              </h4>
-              <p style="margin: 6px 0 0 26px; font-size: 11px; opacity: 0.85; font-weight: 400;">Fecha, hora y estado del servicio</p>
-            </div>
-
-            <div class="form-grid">
-              <div class="col-3 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-calendar-event" style="color: #1e40af;"></i> Fecha del Servicio <span style="color: #dc2626;">*</span>
-                </label>
-                <input type="date" id="srv-fecha" name="fecha_servicio" class="form-control-tms" required style="border: 2px solid #e2e8f0; font-weight: 600;">
+              <div class="col-4 form-group">
+                <label class="form-label">Guía Remitente</label>
+                <input type="text" id="srv-guia-rem" name="guia_remitente" class="form-control-tms" placeholder="T001-XXXXXX">
               </div>
 
-              <div class="col-3 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-clock" style="color: #1e40af;"></i> Hora
-                </label>
-                <input type="time" id="srv-hora" name="hora_servicio" class="form-control-tms" style="border: 2px solid #e2e8f0; font-weight: 600;">
+              <div class="col-4 form-group">
+                <label class="form-label">Guía Transportista</label>
+                <input type="text" id="srv-guia-trans" name="guia_transportista" class="form-control-tms" placeholder="GRT-XXXXXX" readonly>
               </div>
 
-              <div class="col-6 form-group">
-                <label class="form-label" style="font-weight: 600; color: #1e293b; font-size: 12px;">
-                  <i class="bi bi-circle-fill" style="color: #eab308; font-size: 8px;"></i> Estado del Servicio <span style="color: #dc2626;">*</span>
-                </label>
-                <select id="srv-estado" name="estado_servicio" class="form-control-tms" required style="border: 2px solid #e2e8f0; font-weight: 600;">
+              <div class="col-4 form-group">
+                <label class="form-label">Estado del Servicio *</label>
+                <select id="srv-estado" name="estado_servicio" class="form-control-tms" required>
                   <option value="programado">Programado</option>
                   <option value="en_ruta">En Ruta</option>
                   <option value="finalizado">Finalizado / Liquidado</option>
                   <option value="cancelado">Cancelado</option>
                 </select>
               </div>
-            </div>
 
+            </div>
           </div>
-          <div class="tms-modal-footer" style="background: #f8fafc; border-top: 2px solid #e2e8f0; padding: 16px 24px;">
-            <button type="button" class="btn-tms btn-tms-default" id="btn-cancel-modal-servicio">
-              <i class="bi bi-x-circle"></i> Cancelar
-            </button>
-            <button type="submit" class="btn-tms btn-tms-primary" id="btn-guardar-servicio" style="padding: 10px 24px; font-size: 14px; font-weight: 700;">
+          <div class="tms-modal-footer">
+            <button type="button" class="btn-tms btn-tms-default" id="btn-cancel-modal-servicio">Cancelar</button>
+            <button type="button" class="btn-tms btn-tms-default" id="btn-servicio-anterior">Anterior</button>
+            <button type="button" class="btn-tms btn-tms-primary" id="btn-servicio-siguiente">Siguiente</button>
+            <button type="submit" class="btn-tms btn-tms-primary" id="btn-guardar-servicio" hidden>
               <i class="bi bi-save"></i> Guardar Servicio
             </button>
           </div>
@@ -363,6 +270,94 @@ export async function renderServicios(container) {
   const facturaInput = document.getElementById('srv-factura');
   const modalidadSelect = document.getElementById('srv-modalidad');
   const guiaTransInput = document.getElementById('srv-guia-trans');
+  const wizardSteps = 4;
+  let wizardStep = 1;
+  let editingServiceId = '';
+
+  function getFieldContainer(id) {
+    return document.getElementById(id)?.closest('.form-group');
+  }
+
+  const wizardFields = {
+    1: ['srv-fecha', 'srv-hora', 'srv-cliente'],
+    2: ['srv-modalidad'],
+    3: ['srv-vehiculo', 'srv-conductor']
+  };
+  const wizardContainers = new Map();
+  for (const [step, fieldIds] of Object.entries(wizardFields)) {
+    for (const id of fieldIds) {
+      const fieldContainer = getFieldContainer(id);
+      if (fieldContainer) wizardContainers.set(fieldContainer, Number(step));
+    }
+  }
+
+  function renderWizardReview() {
+    const values = [
+      ['Cliente', document.getElementById('srv-cliente').selectedOptions[0]?.textContent],
+      ['Modalidad', modalidadSelect.selectedOptions[0]?.textContent],
+      ['Vehículo', document.getElementById('srv-vehiculo').selectedOptions[0]?.textContent],
+      ['Conductor', document.getElementById('srv-conductor').selectedOptions[0]?.textContent],
+      ['Servicio', document.getElementById('srv-tipo-servicio').value],
+      ['Ruta', `${document.getElementById('srv-origen').value || '—'} → ${document.getElementById('srv-destino').value || '—'}`],
+      ['Fecha y hora', `${document.getElementById('srv-fecha').value || '—'} ${document.getElementById('srv-hora').value || ''}`],
+      ['Total', fmt.moneda(precioInput.value)]
+    ];
+    document.getElementById('srv-wizard-review').innerHTML = `
+      <strong>Resumen del servicio</strong>
+      <dl>${values.map(([label, value]) => `<div><dt>${label}</dt><dd>${String(value || '—').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}</dd></div>`).join('')}</dl>`;
+  }
+
+  function setWizardStep(step) {
+    wizardStep = Math.min(wizardSteps, Math.max(1, step));
+    for (const [fieldContainer, fieldStep] of wizardContainers) {
+      fieldContainer.hidden = fieldStep !== wizardStep;
+    }
+    document.querySelectorAll('#srv-wizard-progress [data-step-indicator]').forEach(indicator => {
+      const number = Number(indicator.dataset.stepIndicator);
+      indicator.classList.toggle('active', number === wizardStep);
+      indicator.classList.toggle('complete', number < wizardStep);
+      indicator.setAttribute('aria-current', number === wizardStep ? 'step' : 'false');
+    });
+    document.getElementById('btn-servicio-anterior').hidden = wizardStep === 1;
+    document.getElementById('btn-servicio-siguiente').hidden = wizardStep === wizardSteps;
+    document.getElementById('btn-guardar-servicio').hidden = wizardStep !== wizardSteps;
+    document.getElementById('srv-wizard-help').textContent = [
+      'Paso 1 de 4: seleccione el cliente y programe fecha y hora.',
+      'Paso 2 de 4: indique si utilizará flota propia o un servicio tercerizado.',
+      'Paso 3 de 4: seleccione un vehículo y un conductor disponibles para ese horario.',
+      'Paso 4 de 4: complete la ruta, los importes y los datos de facturación.'
+    ][wizardStep - 1];
+    if (wizardStep === wizardSteps) renderWizardReview();
+  }
+
+  function renderAssignmentOptions() {
+    const vehicleSelect = document.getElementById('srv-vehiculo');
+    const driverSelect = document.getElementById('srv-conductor');
+    const selectedVehicle = vehicleSelect.value;
+    const selectedDriver = driverSelect.value;
+    const date = document.getElementById('srv-fecha').value;
+    const time = document.getElementById('srv-hora').value.slice(0, 5);
+    const busy = allServicios.filter(service =>
+      String(service.id) !== String(editingServiceId) &&
+      service.fecha_servicio === date &&
+      String(service.hora_servicio || '').slice(0, 5) === time &&
+      service.estado_servicio !== 'cancelado'
+    );
+    const availableVehicles = vehiculosList.filter(vehicle =>
+      String(vehicle.estado || 'activo').toLowerCase() === 'activo' &&
+      (!busy.some(service => String(service.vehiculo_id) === String(vehicle.id)) || String(vehicle.id) === selectedVehicle)
+    );
+    const availableDrivers = conductoresList.filter(driver =>
+      String(driver.estado || 'activo').toLowerCase() === 'activo' &&
+      (!busy.some(service => String(service.conductor_id) === String(driver.id)) || String(driver.id) === selectedDriver)
+    );
+    vehicleSelect.innerHTML = '<option value="">Seleccione un vehículo disponible</option>' +
+      availableVehicles.map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.placa)} - ${escapeHtml(vehicle.modelo || vehicle.tipo || 'Unidad')}</option>`).join('');
+    driverSelect.innerHTML = '<option value="">Seleccione un conductor disponible</option>' +
+      availableDrivers.map(driver => `<option value="${escapeHtml(driver.id)}">${escapeHtml(driver.nombre)}</option>`).join('');
+    if (availableVehicles.some(vehicle => String(vehicle.id) === selectedVehicle)) vehicleSelect.value = selectedVehicle;
+    if (availableDrivers.some(driver => String(driver.id) === selectedDriver)) driverSelect.value = selectedDriver;
+  }
 
   function calcularIGV() {
     const monto = parseFloat(precioInput.value) || 0;
@@ -408,17 +403,12 @@ export async function renderServicios(container) {
 
       const clienteSel = document.getElementById('srv-cliente');
       clienteSel.innerHTML = '<option value="">Seleccione un cliente</option>' +
-        clientesList.map(c => `<option value="${c.id}">${c.nombre} (${c.documento || c.tipo_cliente})</option>`).join('');
+        clientesList.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.nombre)} (${escapeHtml(c.documento || c.tipo_cliente)})</option>`).join('');
 
-      const vehiculoSel = document.getElementById('srv-vehiculo');
-      vehiculoSel.innerHTML = '<option value="">Seleccione un vehículo</option>' +
-        vehiculosList.map(v => `<option value="${v.id}">${v.placa} - ${v.modelo || v.tipo}</option>`).join('');
-
-      const conductorSel = document.getElementById('srv-conductor');
-      conductorSel.innerHTML = '<option value="">Seleccione un conductor</option>' +
-        conductoresList.map(co => `<option value="${co.id}">${co.nombre}</option>`).join('');
+      renderAssignmentOptions();
     } catch (e) {
-      console.warn('Error cargando listas:', e);
+      showToast(`No se pudieron cargar clientes, vehículos y conductores: ${e.message}`, 'error');
+      throw e;
     }
   }
 
@@ -431,6 +421,7 @@ export async function renderServicios(container) {
         renderTable();
       }
     } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="14" role="alert" style="text-align:center;padding:25px;color:#991b1b;">${err.message}</td></tr>`;
       showToast(err.message || 'Error al cargar servicios', 'error');
     }
   }
@@ -545,10 +536,12 @@ export async function renderServicios(container) {
   async function openNewModal() {
     form.reset();
     document.getElementById('srv-id').value = '';
+    editingServiceId = '';
     document.getElementById('modal-servicio-titulo').innerHTML = `<i class="bi bi-truck"></i> Registrar Nuevo Servicio`;
     document.getElementById('srv-fecha').value = new Date().toISOString().split('T')[0];
     document.getElementById('srv-hora').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
     costoInput.disabled = true;
+    renderAssignmentOptions();
 
     try {
       const res = await api.get('servicios/correlativo.php', { tipo_comprobante: 'FACTURA' });
@@ -559,6 +552,7 @@ export async function renderServicios(container) {
     } catch (e) {}
 
     calcularIGV();
+    setWizardStep(1);
     modal.classList.add('show');
   }
 
@@ -567,6 +561,7 @@ export async function renderServicios(container) {
       const res = await api.get('servicios/index.php', { action: 'get', id });
       if (res.success && res.data) {
         const s = res.data;
+        editingServiceId = String(s.id);
         document.getElementById('srv-id').value = s.id;
         document.getElementById('modal-servicio-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Servicio #${s.id}`;
         document.getElementById('srv-fecha').value = s.fecha_servicio || '';
@@ -577,6 +572,7 @@ export async function renderServicios(container) {
         document.getElementById('srv-tipo-servicio').value = s.tipo_servicio || 'Local';
         document.getElementById('srv-tipo-carga').value = s.tipo_carga || 'General';
         document.getElementById('srv-modalidad').value = s.modalidad || 'propio';
+        renderAssignmentOptions();
         document.getElementById('srv-forma-pago').value = s.forma_pago || 'Contado';
         document.getElementById('srv-origen').value = s.origen || '';
         document.getElementById('srv-destino').value = s.destino || '';
@@ -595,6 +591,7 @@ export async function renderServicios(container) {
         }
 
         calcularIGV();
+        setWizardStep(1);
         modal.classList.add('show');
       }
     } catch (err) {
@@ -602,8 +599,28 @@ export async function renderServicios(container) {
     }
   }
 
+  document.getElementById('btn-servicio-siguiente').addEventListener('click', () => {
+    const activeFields = [...wizardContainers].filter(([, step]) => step === wizardStep).map(([fieldContainer]) => fieldContainer);
+    const invalid = activeFields.flatMap(fieldContainer => [...fieldContainer.querySelectorAll('input, select, textarea')]).find(field => !field.checkValidity());
+    if (invalid) {
+      invalid.reportValidity();
+      return;
+    }
+    setWizardStep(wizardStep + 1);
+  });
+  document.getElementById('btn-servicio-anterior').addEventListener('click', () => setWizardStep(wizardStep - 1));
+  document.getElementById('srv-fecha').addEventListener('change', renderAssignmentOptions);
+  document.getElementById('srv-hora').addEventListener('change', renderAssignmentOptions);
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const invalid = [...form.querySelectorAll('input, select, textarea')].find(field => !field.disabled && !field.checkValidity());
+    if (invalid) {
+      const ownerStep = wizardContainers.get(getFieldContainer(invalid.id)) || wizardSteps;
+      setWizardStep(ownerStep);
+      invalid.reportValidity();
+      return;
+    }
     const id = document.getElementById('srv-id').value;
     const isEdit = Boolean(id);
 

@@ -8,13 +8,15 @@ $data = get_request_data();
 // Si la acción es check o me: verificar sesión activa
 if ($action === 'check' || $action === 'me') {
     if (isset($_SESSION['usuario'])) {
+        require_auth();
         json_response([
             "success" => true,
             "logged_in" => true,
             "user" => [
                 "usuario" => $_SESSION['usuario'],
                 "nombre" => $_SESSION['nombre'] ?? $_SESSION['usuario'],
-                "rol" => $_SESSION['rol'] ?? 'admin'
+                "rol" => $_SESSION['rol'] ?? 'usuario',
+                "module_access" => $_SESSION['module_access'] ?? []
             ]
         ]);
     } else {
@@ -22,13 +24,13 @@ if ($action === 'check' || $action === 'me') {
             "success" => false,
             "logged_in" => false,
             "error" => "No hay sesión activa."
-        ], 401);
+        ]);
     }
 }
 
 // Proceso de Login
 $usuario = mysqli_real_escape_string($conn, trim($data['usuario'] ?? ''));
-$raw_pass = trim($data['password'] ?? '');
+$raw_pass = (string)($data['password'] ?? '');
 $password = md5($raw_pass);
 
 if (empty($usuario) || empty($raw_pass)) {
@@ -39,11 +41,14 @@ if (empty($usuario) || empty($raw_pass)) {
     exit;
 }
 
-$sql = "SELECT * FROM usuarios WHERE usuario='$usuario' AND password='$password' LIMIT 1";
+$sql = "SELECT * FROM usuarios WHERE usuario='$usuario' LIMIT 1";
 $result = mysqli_query($conn, $sql);
 
 if ($result && mysqli_num_rows($result) > 0) {
     $row = mysqli_fetch_assoc($result);
+    $stored = $row['password'];
+    $valid = password_verify($raw_pass, $stored) || (preg_match('/^[a-f0-9]{32}$/i', $stored) && hash_equals(strtolower($stored), md5($raw_pass)));
+    if (!$valid) json_response(['success' => false, 'error' => 'Usuario o contraseña incorrectos.'], 401);
 
     if (isset($row['estado']) && $row['estado'] !== 'activo') {
         if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || !empty($data)) {
@@ -53,9 +58,10 @@ if ($result && mysqli_num_rows($result) > 0) {
         exit;
     }
 
+    session_regenerate_id(true);
     $_SESSION['usuario'] = $row['usuario'];
     $_SESSION['nombre'] = $row['nombre'] ?? $row['usuario'];
-    $_SESSION['rol'] = $row['rol'] ?? 'admin';
+    $_SESSION['rol'] = $row['rol'] ?? 'usuario';
 
     // Si la petición viene en formato JSON o desde fetch
     if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || !empty($data)) {
@@ -66,7 +72,7 @@ if ($result && mysqli_num_rows($result) > 0) {
                 "id" => $row['id'] ?? null,
                 "usuario" => $row['usuario'],
                 "nombre" => $row['nombre'] ?? $row['usuario'],
-                "rol" => $row['rol'] ?? 'admin'
+                "rol" => $row['rol'] ?? 'usuario'
             ]
         ]);
     }

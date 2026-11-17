@@ -6,7 +6,7 @@ require_auth();
 $desde = $_GET['desde'] ?? '';
 $hasta = $_GET['hasta'] ?? '';
 
-$where_fechas = ["tipo_comprobante != 'SIN_COMPROBANTE'"];
+$where_fechas = ["tipo_comprobante IN ('FACTURA','BOLETA')", "COALESCE(TRIM(numero_factura),'') <> ''", "estado_servicio <> 'cancelado'"];
 if (!empty($desde)) {
     $d_esc = mysqli_real_escape_string($conn, $desde);
     $where_fechas[] = "fecha_servicio >= '$d_esc'";

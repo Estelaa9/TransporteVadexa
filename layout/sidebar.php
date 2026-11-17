@@ -11,6 +11,7 @@
 <hr>
 
 <ul class="menu">
+<li><a href="../frontend/index.html#facturas"><i class="bi bi-receipt"></i> Facturas</a></li>
 
 <li>
 <a href="../dashboard/index.php">
