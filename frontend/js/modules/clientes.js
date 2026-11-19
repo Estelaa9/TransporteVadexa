@@ -1,5 +1,5 @@
 // frontend/js/modules/clientes.js - Gestión de Clientes y su Historial de Viajes
-import { api, showToast, fmt, exportTableToExcel } from '../api.js';
+import { api, showToast, fmt, exportTableToExcel, esc } from '../api.js';
 
 export async function renderClientes(container) {
   let clientesList = [];
@@ -95,6 +95,15 @@ export async function renderClientes(container) {
                   <option value="Empresa">Empresa</option>
                   <option value="Persona">Persona Natural</option>
                 </select>
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Días de crédito</label>
+                <select id="cli-dias-credito" class="form-control-tms" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+                  <option value="0">Contado</option><option value="7">7 días</option><option value="15">15 días</option>
+                  <option value="30">30 días</option><option value="45">45 días</option><option value="60">60 días</option>
+                </select>
+                <small class="muted">Empresa: RUC de 11 dígitos válido. Persona: DNI de 8 dígitos.</small>
               </div>
 
               <div class="col-6 form-group">
@@ -218,7 +227,7 @@ export async function renderClientes(container) {
     const q = searchInput.value.toLowerCase().trim();
     const filtered = clientesList.filter(c => {
       if (!q) return true;
-      const t = `${c.id} ${c.nombre} ${c.documento} ${c.telefono} ${c.direccion} ${c.email}`.toLowerCase();
+      const t = `${esc(c.id)} ${esc(c.nombre)} ${esc(c.documento)} ${esc(c.telefono)} ${esc(c.direccion)} ${esc(c.email)}`.toLowerCase();
       return t.includes(q);
     });
 
@@ -231,21 +240,21 @@ export async function renderClientes(container) {
 
     tbody.innerHTML = filtered.map(c => `
       <tr>
-        <td><strong>#${c.id}</strong></td>
-        <td><strong style="color: #0f172a;">${c.nombre}</strong></td>
-        <td><span class="badge-status" style="background: ${c.tipo_cliente === 'Empresa' ? '#eff6ff' : '#f8fafc'}; color: ${c.tipo_cliente === 'Empresa' ? '#1d4ed8' : '#334155'}; border: 1px solid #cbd5e1;">${c.tipo_cliente || 'Empresa'}</span></td>
-        <td><code>${c.documento || '-'}</code></td>
-        <td>${c.telefono || '-'}</td>
-        <td><small style="color: #64748b;">${c.direccion || '-'}</small></td>
-        <td><small>${c.email || '-'}</small></td>
+        <td><strong>#${esc(c.id)}</strong></td>
+        <td><strong style="color: #0f172a;">${esc(c.nombre)}</strong></td>
+        <td><span class="badge-status" style="background: ${c.tipo_cliente === 'Empresa' ? '#eff6ff' : '#f8fafc'}; color: ${c.tipo_cliente === 'Empresa' ? '#1d4ed8' : '#334155'}; border: 1px solid #cbd5e1;">${esc(c.tipo_cliente || 'Empresa')}</span></td>
+        <td><code>${esc(c.documento || '-')}</code></td>
+        <td>${esc(c.telefono || '-')}</td>
+        <td><small style="color: #64748b;">${esc(c.direccion || '-')}</small></td>
+        <td><small>${esc(c.email || '-')}</small></td>
         <td class="no-export" style="text-align: center; white-space: nowrap;">
-          <button class="btn-pill-action" data-action="historial" data-id="${c.id}" data-nombre="${encodeURIComponent(c.nombre)}" title="Ver Historial de Viajes" style="background:#0284c7;">
+          <button class="btn-pill-action" data-action="historial" data-id="${esc(c.id)}" data-nombre="${encodeURIComponent(c.nombre)}" title="Ver Historial de Viajes" style="background:#0284c7;">
             <i class="bi bi-clock-history"></i> Viajes
           </button>
-          <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${c.id}" title="Editar">
+          <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${esc(c.id)}" title="Editar">
             <i class="bi bi-pencil"></i>
           </button>
-          <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${c.id}" title="Eliminar">
+          <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${esc(c.id)}" title="Eliminar">
             <i class="bi bi-trash"></i>
           </button>
         </td>
@@ -302,12 +311,12 @@ export async function renderClientes(container) {
 
         tbodyHist.innerHTML = servicios.map(s => `
           <tr>
-            <td><strong>#${s.id}</strong></td>
+            <td><strong>#${esc(s.id)}</strong></td>
             <td>${fmt.fecha(s.fecha_servicio)}</td>
-            <td>${s.origen || '-'} → ${s.destino || '-'}</td>
-            <td>${s.placa || '-'}</td>
-            <td>${s.conductor || '-'}</td>
-            <td><code>${s.guia_transportista || '-'}</code></td>
+            <td>${esc(s.origen || '-')} → ${esc(s.destino || '-')}</td>
+            <td>${esc(s.placa || '-')}</td>
+            <td>${esc(s.conductor || '-')}</td>
+            <td><code>${esc(s.guia_transportista || '-')}</code></td>
             <td style="font-weight: 700;">${fmt.moneda(s.precio_cliente)}</td>
             <td>${fmt.badgeEstado(s.estado_servicio)}</td>
           </tr>
@@ -324,13 +333,14 @@ export async function renderClientes(container) {
       if (res.success && res.data) {
         const c = res.data;
         document.getElementById('cli-id').value = c.id;
-        document.getElementById('modal-cliente-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Cliente #${c.id}`;
+        document.getElementById('modal-cliente-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Cliente #${esc(c.id)}`;
         document.getElementById('cli-nombre').value = c.nombre || '';
         document.getElementById('cli-tipo').value = c.tipo_cliente || 'Empresa';
         document.getElementById('cli-documento').value = c.documento || '';
         document.getElementById('cli-telefono').value = c.telefono || '';
         document.getElementById('cli-email').value = c.email || '';
         document.getElementById('cli-direccion').value = c.direccion || '';
+        document.getElementById('cli-dias-credito').value = String(c.dias_credito ?? 0);
         modalCli.classList.add('show');
       }
     } catch (err) {
@@ -358,6 +368,7 @@ export async function renderClientes(container) {
       telefono: document.getElementById('cli-telefono').value,
       email: document.getElementById('cli-email').value,
       direccion: document.getElementById('cli-direccion').value,
+      dias_credito: document.getElementById('cli-dias-credito').value,
     };
 
     const btn = document.getElementById('btn-guardar-cliente');

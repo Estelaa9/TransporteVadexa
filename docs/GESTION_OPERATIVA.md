@@ -1,3 +1,5 @@
+> **Versión 2.2 (18/11/2026):** este documento describe versiones anteriores. Los cambios de la auditoría v2.1 y las tres mejoras (roles y permisos, facturación y cuentas por cobrar, análisis integral) están en [docs/CAMBIOS_AUDITORIA.md](CAMBIOS_AUDITORIA.md). Instalación: [docs/DESPLIEGUE.md](DESPLIEGUE.md).
+
 # Gestión operativa de VADEXSA
 
 Implementación de las cinco hojas de ideas (22/09/2026). La entrada principal es `frontend/index.html`.

@@ -1,21 +1,12 @@
 <?php
-// login/logout.php - Cerrar sesión
-require_once __DIR__ . "/../config/conexion.php";
-
+// login/logout.php - Cerrar sesión (solo POST para evitar cierres forzados por enlaces).
+require_once __DIR__ . '/../config/conexion.php';
+require_method('POST');
+if (!empty($_SESSION['user_id'])) auditar('logout', 'usuarios', $_SESSION['user_id']);
 $_SESSION = [];
-if (ini_get("session.use_cookies")) {
-    $params = session_get_cookie_params();
-    setcookie(session_name(), '', time() - 42000,
-        $params["path"], $params["domain"],
-        $params["secure"], $params["httponly"]
-    );
+if (ini_get('session.use_cookies')) {
+    $p = session_get_cookie_params();
+    setcookie(session_name(), '', ['expires' => time() - 42000, 'path' => $p['path'], 'domain' => $p['domain'], 'secure' => $p['secure'], 'httponly' => true, 'samesite' => 'Lax']);
 }
 session_destroy();
-
-if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || $_SERVER['REQUEST_METHOD'] === 'POST') {
-    json_response(["success" => true, "message" => "Sesión cerrada correctamente."]);
-}
-
-header("Location: ../login.php");
-exit;
-?>
+json_response(['success' => true, 'message' => 'Sesión cerrada correctamente.']);

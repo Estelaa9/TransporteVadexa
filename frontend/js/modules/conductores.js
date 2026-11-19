@@ -1,5 +1,5 @@
 // frontend/js/modules/conductores.js - Gestión de Conductores y Disponibilidad
-import { api, showToast, exportTableToExcel } from '../api.js';
+import { api, showToast, exportTableToExcel, esc } from '../api.js';
 
 export async function renderConductores(container) {
   let conductoresList = [];
@@ -89,6 +89,23 @@ export async function renderConductores(container) {
               </div>
 
               <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Categoría de licencia</label>
+                <select id="cond-categoria" class="form-control-tms" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+                  <option value="">Sin dato</option><option>A-I</option><option>A-IIA</option><option>A-IIB</option><option>A-IIIA</option><option>A-IIIB</option><option>A-IIIC</option>
+                </select>
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Vencimiento de la licencia *</label>
+                <input type="date" id="cond-licencia-venc" class="form-control-tms" required style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">DNI</label>
+                <input type="text" id="cond-dni" class="form-control-tms" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="8 dígitos" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
                 <label class="form-label" style="font-size: 12px; font-weight: 600;">Teléfono / Celular</label>
                 <input type="text" id="cond-telefono" class="form-control-tms" placeholder="987654321" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
@@ -152,7 +169,7 @@ export async function renderConductores(container) {
     const q = searchInput.value.toLowerCase().trim();
     const filtered = conductoresList.filter(c => {
       if (!q) return true;
-      const t = `${c.id} ${c.nombre} ${c.licencia} ${c.telefono} ${c.direccion} ${c.estado}`.toLowerCase();
+      const t = `${esc(c.id)} ${esc(c.nombre)} ${esc(c.licencia)} ${esc(c.telefono)} ${esc(c.direccion)} ${esc(c.estado)}`.toLowerCase();
       return t.includes(q);
     });
 
@@ -165,17 +182,17 @@ export async function renderConductores(container) {
 
     tbody.innerHTML = filtered.map(c => `
       <tr>
-        <td><strong>#${c.id}</strong></td>
-        <td><strong style="color: #0f172a;">${c.nombre}</strong></td>
-        <td><code>${c.licencia || '-'}</code></td>
-        <td>${c.telefono || '-'}</td>
-        <td><small style="color: #64748b;">${c.direccion || '-'}</small></td>
-        <td><span class="badge-status" style="background: ${c.estado === 'activo' ? '#dcfce7' : '#fee2e2'}; color: ${c.estado === 'activo' ? '#15803d' : '#991b1b'};">${c.estado || 'activo'}</span></td>
+        <td><strong>#${esc(c.id)}</strong></td>
+        <td><strong style="color: #0f172a;">${esc(c.nombre)}</strong></td>
+        <td><code>${esc(c.licencia || '-')}</code>${c.estado_licencia === 'vencido' ? '<br><span class="facturas-status fac-vencida">Licencia vencida</span>' : c.estado_licencia === 'por_vencer' ? '<br><span class="facturas-status fac-proxima">Vence pronto</span>' : c.estado_licencia === 'sin_dato' ? '<br><small class="muted">Sin vencimiento</small>' : ''}</td>
+        <td>${esc(c.telefono || '-')}</td>
+        <td><small style="color: #64748b;">${esc(c.direccion || '-')}</small></td>
+        <td><span class="badge-status" style="background: ${c.estado === 'activo' ? '#dcfce7' : '#fee2e2'}; color: ${c.estado === 'activo' ? '#15803d' : '#991b1b'};">${esc(c.estado || 'activo')}</span></td>
         <td class="no-export" style="text-align: center; white-space: nowrap;">
-          <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${c.id}" title="Editar">
+          <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${esc(c.id)}" title="Editar">
             <i class="bi bi-pencil"></i>
           </button>
-          <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${c.id}" title="Eliminar">
+          <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${esc(c.id)}" title="Eliminar">
             <i class="bi bi-trash"></i>
           </button>
         </td>
@@ -198,12 +215,15 @@ export async function renderConductores(container) {
         if (res.success && res.data) {
           const c = res.data;
           document.getElementById('cond-id').value = c.id;
-          document.getElementById('modal-conductor-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Conductor #${c.id}`;
+          document.getElementById('modal-conductor-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Conductor #${esc(c.id)}`;
           document.getElementById('cond-nombre').value = c.nombre || '';
           document.getElementById('cond-licencia').value = c.licencia || '';
           document.getElementById('cond-telefono').value = c.telefono || '';
           document.getElementById('cond-direccion').value = c.direccion || '';
           document.getElementById('cond-estado').value = c.estado || 'activo';
+          document.getElementById('cond-categoria').value = c.categoria_licencia || '';
+          document.getElementById('cond-licencia-venc').value = c.licencia_vencimiento || '';
+          document.getElementById('cond-dni').value = c.dni || '';
           modal.classList.add('show');
         }
       } catch (err) {
@@ -243,6 +263,9 @@ export async function renderConductores(container) {
       telefono: document.getElementById('cond-telefono').value.trim(),
       direccion: document.getElementById('cond-direccion').value.trim(),
       estado: document.getElementById('cond-estado').value,
+      categoria_licencia: document.getElementById('cond-categoria').value,
+      licencia_vencimiento: document.getElementById('cond-licencia-venc').value,
+      dni: document.getElementById('cond-dni').value.trim(),
     };
 
     const btn = document.getElementById('btn-guardar-conductor');

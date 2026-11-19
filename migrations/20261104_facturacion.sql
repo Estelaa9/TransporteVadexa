@@ -1,3 +1,4 @@
+-- Superseded: las migraciones se aplican desde config/migraciones.php (php migrations/migrar.php).
 -- Registra la fecha real de emisión sin asumirla a partir de la fecha del servicio.
 -- La comprobación permite volver a ejecutar esta migración de forma segura.
 SET @vadexsa_fecha_emision_existe = (

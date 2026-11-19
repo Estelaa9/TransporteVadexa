@@ -1,42 +1,30 @@
 <?php
-// servicios/cambiar_estado.php - Cambiar estado de servicio (programado / en_ruta / finalizado / cancelado)
-require_once __DIR__ . "/../config/conexion.php";
+// servicios/cambiar_estado.php - Avance de estado del servicio con la máquina de estados del backend (NEG-14).
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/reglas.php';
 require_auth();
-require_once __DIR__ . '/../config/gestion.php';
-
+require_method('POST');
 $data = get_request_data();
-$id = (int)($data['id'] ?? $_GET['id'] ?? 0);
-$estado = mysqli_real_escape_string($conn, trim($data['estado_servicio'] ?? $data['estado'] ?? $_GET['estado'] ?? ''));
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_response(['success' => false, 'error' => 'Método no permitido.'], 405);
-if (!in_array($estado, ['programado', 'en_ruta', 'finalizado', 'cancelado'], true)) json_response(['success' => false, 'error' => 'Estado no válido.'], 422);
-
-if (!$id || empty($estado)) {
-    json_response(["success" => false, "error" => "ID y nuevo estado son obligatorios."], 400);
+$id = (int)($data['id'] ?? 0);
+$estado = (string)($data['estado_servicio'] ?? $data['estado'] ?? '');
+if ($id <= 0 || !in_array($estado, ['programado', 'en_ruta', 'finalizado', 'cancelado'], true)) {
+    json_response(['success' => false, 'error' => 'Indique el servicio y un estado válido.'], 422);
+}
+if ($estado === 'cancelado') {
+    // La cancelación exige permiso de anulación y motivo.
+    if (!puede('servicios', 'anular')) json_response(['success' => false, 'error' => 'No tiene permiso para anular servicios.'], 403);
+    require __DIR__ . '/eliminar.php';
+    exit;
 }
 
 mysqli_begin_transaction($conn);
-$current = mysqli_fetch_assoc(mysqli_query($conn, "SELECT estado_servicio, numero_factura FROM servicios WHERE id=$id FOR UPDATE"));
-if (!$current) json_response(['success' => false, 'error' => 'Servicio no encontrado.'], 404);
-$allowed = ['programado' => ['en_ruta','cancelado'], 'en_ruta' => ['finalizado','cancelado'], 'finalizado' => [], 'cancelado' => []];
-if (!in_array($estado, $allowed[$current['estado_servicio']] ?? [], true) || ($estado === 'cancelado' && !empty($current['numero_factura']))) json_response(['success' => false, 'error' => 'La transición de estado no está permitida.'], 409);
-$anterior = mysqli_real_escape_string($conn, $current['estado_servicio']);
-if ($estado === 'cancelado' && (int)mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM servicio_abonos WHERE servicio_id=$id"))[0] > 0) json_response(['success'=>false,'error'=>'No se puede cancelar un servicio con abonos.'],409);
-$sql = "UPDATE servicios SET estado_servicio='$estado' WHERE id='$id' AND estado_servicio='$anterior'";
-
-if (mysqli_query($conn, $sql)) {
-    mysqli_commit($conn);
-    if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || $_SERVER['REQUEST_METHOD'] === 'POST') {
-        json_response([
-            "success" => true,
-            "message" => "Estado del servicio #{$id} actualizado a {$estado}.",
-            "id" => $id,
-            "estado" => $estado
-        ]);
-    }
-    header("Location: programacion.php");
-    exit;
-} else {
+$actual = db_one($conn, 'SELECT id, estado_servicio FROM servicios WHERE id = ? FOR UPDATE', 'i', [$id]);
+if (!$actual) { mysqli_rollback($conn); json_response(['success' => false, 'error' => 'Servicio no encontrado.'], 404); }
+if (!servicio_transicion_valida($actual['estado_servicio'], $estado)) {
     mysqli_rollback($conn);
-    json_response(["success" => false, "error" => "Error al actualizar estado: " . mysqli_error($conn)], 500);
+    json_response(['success' => false, 'error' => "No se puede pasar de «{$actual['estado_servicio']}» a «{$estado}»."], 409);
 }
-?>
+db_query($conn, 'UPDATE servicios SET estado_servicio = ?, updated_by = ?, version = version + 1 WHERE id = ?', 'ssi', [$estado, $_SESSION['usuario'], $id]);
+auditar('cambiar_estado', 'servicios', $id, ['estado_servicio' => $actual['estado_servicio']], ['estado_servicio' => $estado]);
+mysqli_commit($conn);
+json_response(['success' => true, 'message' => "Servicio #{$id} actualizado a {$estado}.", 'id' => $id, 'estado' => $estado]);

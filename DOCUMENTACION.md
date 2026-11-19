@@ -1,3 +1,5 @@
+> **Versión 2.2 (18/11/2026):** este documento describe versiones anteriores. Los cambios de la auditoría v2.1 y las tres mejoras (roles y permisos, facturación y cuentas por cobrar, análisis integral) están en [docs/CAMBIOS_AUDITORIA.md](docs/CAMBIOS_AUDITORIA.md). Instalación: [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
 # Documentación del sistema — VADEXSA LOGISTIC / Transporte
 
 > Actualización 22/09/2026: la aplicación utiliza la interfaz SPA de `frontend/index.html` y endpoints JSON. Consulte [Gestión operativa](docs/GESTION_OPERATIVA.md) para el flujo actual, roles, abonos, migración y pruebas. Las secciones históricas siguientes describen también las pantallas PHP anteriores.

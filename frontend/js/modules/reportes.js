@@ -1,5 +1,5 @@
 // frontend/js/modules/reportes.js - Generación e Impresión de Reportes
-import { api, showToast, fmt, exportTableToExcel } from '../api.js';
+import { api, showToast, fmt, exportTableToExcel, esc } from '../api.js';
 
 export async function renderReportes(container) {
   let reportType = 'servicios';
@@ -26,7 +26,7 @@ export async function renderReportes(container) {
         <i class="bi bi-receipt"></i> Facturación e IGV
       </button>
       <button class="tms-tab-btn" id="rep-tab-utilidad" data-type="utilidad">
-        <i class="bi bi-graph-up"></i> Utilidad y Rentabilidad
+        <i class="bi bi-graph-up"></i> Margen por servicio (sin IGV)
       </button>
       <button class="tms-tab-btn" id="rep-tab-clientes" data-type="clientes">
         <i class="bi bi-people"></i> Ventas por Cliente
@@ -148,22 +148,22 @@ export async function renderReportes(container) {
 
       tbody.innerHTML = reportData.map(s => `
         <tr>
-          <td><strong>#${s.id}</strong></td>
+          <td><strong>#${esc(s.id)}</strong></td>
           <td>${fmt.fecha(s.fecha_servicio)}</td>
-          <td><strong>${s.cliente || '-'}</strong></td>
-          <td>${s.placa || '-'}</td>
-          <td>${s.conductor || '-'}</td>
-          <td>${s.origen || '-'} → ${s.destino || '-'}</td>
-          <td><code>${s.guia_transportista || '-'}</code></td>
+          <td><strong>${esc(s.cliente || '-')}</strong></td>
+          <td>${esc(s.placa || '-')}</td>
+          <td>${esc(s.conductor || '-')}</td>
+          <td>${esc(s.origen || '-')} → ${esc(s.destino || '-')}</td>
+          <td><code>${esc(s.guia_transportista || '-')}</code></td>
           <td style="text-align: right; font-weight: 700;">${fmt.moneda(s.precio_cliente)}</td>
           <td style="text-align: center;">${fmt.badgeEstado(s.estado_servicio)}</td>
         </tr>
       `).join('');
 
     } else if (reportType === 'facturacion') {
-      document.getElementById('rep-kpi1-title').textContent = 'Comprobantes Emitidos';
+      document.getElementById('rep-kpi1-title').textContent = 'Comprobantes (incluye anulados y notas de crédito)';
       document.getElementById('rep-kpi1-val').textContent = res.total_registros || 0;
-      document.getElementById('rep-kpi2-title').textContent = 'Total Facturado';
+      document.getElementById('rep-kpi2-title').textContent = 'Total facturado vigente (con IGV)';
       document.getElementById('rep-kpi2-val').textContent = fmt.moneda(res.total_facturado);
       document.getElementById('rep-kpi3-box').style.display = 'flex';
       document.getElementById('rep-kpi3-title').textContent = 'Total IGV Generado';
@@ -171,9 +171,10 @@ export async function renderReportes(container) {
 
       thead.innerHTML = `
         <tr>
-          <th>Fecha</th>
+          <th>Emisión</th>
           <th>N° Comprobante</th>
-          <th>Tipo</th>
+          <th>Tipo / estado</th>
+          <th>Cliente</th>
           <th style="text-align: right;">Base Imponible (S/)</th>
           <th style="text-align: right;">IGV 18% (S/)</th>
           <th style="text-align: right;">Total Comprobante (S/)</th>
@@ -181,15 +182,16 @@ export async function renderReportes(container) {
       `;
 
       if (reportData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 25px; color: #64748b;">No hay comprobantes emitidos en este periodo.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 25px; color: #64748b;">No hay comprobantes emitidos en este periodo.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = reportData.map(f => `
         <tr>
-          <td>${fmt.fecha(f.fecha_servicio)}</td>
-          <td><strong style="color: #1d4ed8;">${f.numero_factura || '-'}</strong></td>
-          <td><span class="badge-status" style="background: #eff6ff; color: #1d4ed8;">${f.tipo_comprobante}</span></td>
+          <td>${esc(fmt.fecha(f.fecha_emision))}</td>
+          <td><strong style="color: #1d4ed8;">${esc(f.numero_factura || '-')}</strong>${f.referencia ? `<br><small>ref. ${esc(f.referencia)}</small>` : ''}</td>
+          <td><span class="badge-status" style="background: #eff6ff; color: #1d4ed8;">${esc(f.tipo_comprobante)}</span> <small>${esc(f.estado)}</small></td>
+          <td>${esc(f.cliente || '-')}</td>
           <td style="text-align: right;">${fmt.moneda(f.base_imponible)}</td>
           <td style="text-align: right; color: #d97706; font-weight: 600;">${fmt.moneda(f.igv)}</td>
           <td style="text-align: right; font-weight: 700; color: #15803d;">${fmt.moneda(f.precio_cliente)}</td>
@@ -199,10 +201,10 @@ export async function renderReportes(container) {
     } else if (reportType === 'utilidad') {
       document.getElementById('rep-kpi1-title').textContent = 'Servicios Evaluados';
       document.getElementById('rep-kpi1-val').textContent = res.total_registros || 0;
-      document.getElementById('rep-kpi2-title').textContent = 'Facturación Bruta';
-      document.getElementById('rep-kpi2-val').textContent = fmt.moneda(res.total_facturado);
+      document.getElementById('rep-kpi2-title').textContent = 'Ingresos sin IGV (base imponible)';
+      document.getElementById('rep-kpi2-val').textContent = fmt.moneda(res.total_base);
       document.getElementById('rep-kpi3-box').style.display = 'flex';
-      document.getElementById('rep-kpi3-title').textContent = 'Margen antes de gastos';
+      document.getElementById('rep-kpi3-title').textContent = 'Margen sin IGV (antes de gastos generales)';
       document.getElementById('rep-kpi3-val').textContent = fmt.moneda(res.total_utilidad);
 
       thead.innerHTML = `
@@ -210,25 +212,29 @@ export async function renderReportes(container) {
           <th>ID</th>
           <th>Fecha</th>
           <th>Modalidad</th>
-          <th style="text-align: right;">Precio del servicio (S/)</th>
-          <th style="text-align: right;">Costo Proveedor (S/)</th>
-          <th style="text-align: right;">Margen antes de gastos (S/)</th>
+          <th style="text-align: right;">Precio con IGV (S/)</th>
+          <th style="text-align: right;">Base sin IGV (S/)</th>
+          <th style="text-align: right;">Costo proveedor (S/)</th>
+          <th style="text-align: right;">Gastos del viaje (S/)</th>
+          <th style="text-align: right;">Margen (S/)</th>
         </tr>
       `;
 
       if (reportData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 25px; color: #64748b;">No hay datos de utilidad en el rango seleccionado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 25px; color: #64748b;">No hay servicios finalizados en el rango seleccionado.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = reportData.map(u => `
         <tr>
-          <td><strong>#${u.id}</strong></td>
+          <td><strong>#${esc(u.id)}</strong></td>
           <td>${fmt.fecha(u.fecha_servicio)}</td>
-          <td><span class="badge-status" style="background: ${u.modalidad === 'propio' ? '#eff6ff' : '#fef3c7'};">${u.modalidad}</span></td>
-          <td style="text-align: right; font-weight: 600;">${fmt.moneda(u.precio_cliente)}</td>
+          <td><span class="badge-status" style="background: ${u.modalidad === 'propio' ? '#eff6ff' : '#fef3c7'};">${esc(u.modalidad)}</span></td>
+          <td style="text-align: right;">${fmt.moneda(u.precio_cliente)}</td>
+          <td style="text-align: right; font-weight: 600;">${fmt.moneda(u.base_imponible)}</td>
           <td style="text-align: right; color: #dc2626;">${fmt.moneda(u.costo_proveedor)}</td>
-          <td style="text-align: right; font-weight: 700; color: ${u.utilidad >= 0 ? '#15803d' : '#dc2626'};">${fmt.moneda(u.utilidad)}</td>
+          <td style="text-align: right; color: #dc2626;">${fmt.moneda(u.gastos_vinculados)}</td>
+          <td style="text-align: right; font-weight: 700; color: ${Number(u.utilidad) >= 0 ? '#15803d' : '#dc2626'};">${fmt.moneda(u.utilidad)}</td>
         </tr>
       `).join('');
 
@@ -255,9 +261,9 @@ export async function renderReportes(container) {
 
       tbody.innerHTML = reportData.map(c => `
         <tr>
-          <td><strong style="color: #0f172a;">${c.cliente || 'Sin nombre'}</strong></td>
-          <td><code>${c.documento || '-'}</code></td>
-          <td style="text-align: center;"><strong>${c.total_viajes}</strong></td>
+          <td><strong style="color: #0f172a;">${esc(c.cliente || 'Sin nombre')}</strong></td>
+          <td><code>${esc(c.documento || '-')}</code></td>
+          <td style="text-align: center;"><strong>${esc(c.total_viajes)}</strong></td>
           <td style="text-align: right; font-weight: 700; color: #15803d;">${fmt.moneda(c.total_facturado)}</td>
         </tr>
       `).join('');

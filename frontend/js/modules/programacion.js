@@ -1,5 +1,6 @@
 // frontend/js/modules/programacion.js - Programación y Despacho Diario
-import { api, showToast, fmt } from '../api.js';
+import { api, showToast, fmt, esc } from '../api.js';
+import { auth } from './auth.js';
 
 export async function renderProgramacion(container) {
   let selectedDate = new Date().toISOString().split('T')[0];
@@ -141,25 +142,25 @@ export async function renderProgramacion(container) {
       } else {
         tbody.innerHTML = servicios.map(s => `
           <tr>
-            <td><strong style="color: #1d4ed8; font-size: 12.5px;"><i class="bi bi-clock"></i> ${fmt.hora(s.hora_servicio)}</strong></td>
-            <td><strong>#${s.id}</strong></td>
-            <td><strong>${s.cliente || '-'}</strong></td>
-            <td><span class="badge-status" style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;">${s.placa || '-'}</span></td>
-            <td>${s.conductor || '-'}</td>
+            <td><strong style="color: #1d4ed8; font-size: 12.5px;"><i class="bi bi-clock"></i> ${esc(fmt.hora(s.hora_servicio))}–${esc(fmt.hora(s.hora_fin_estimada))}</strong></td>
+            <td><strong>#${esc(s.id)}</strong></td>
+            <td><strong>${esc(s.cliente || '-')}</strong></td>
+            <td><span class="badge-status" style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;">${esc(s.modalidad === 'tercerizado' ? (s.proveedor || 'Tercerizado') : (s.placa || '-'))}</span></td>
+            <td>${esc(s.modalidad === 'tercerizado' ? 'Del proveedor' : (s.conductor || '-'))}</td>
             <td>
-              <div>${s.origen || '-'}</div>
-              <small style="color: #64748b;"><i class="bi bi-arrow-right"></i> ${s.destino || '-'}</small>
+              <div>${esc(s.origen || '-')}</div>
+              <small style="color: #64748b;"><i class="bi bi-arrow-right"></i> ${esc(s.destino || '-')}</small>
             </td>
-            <td><span class="badge-status" style="background:#f8fafc; border:1px solid #e2e8f0;">${s.tipo_carga || 'General'}</span></td>
-            <td><code>${s.guia_transportista || '-'}</code></td>
+            <td><span class="badge-status" style="background:#f8fafc; border:1px solid #e2e8f0;">${esc(s.tipo_carga || 'General')}</span></td>
+            <td><code>${esc(s.guia_transportista || '-')}</code></td>
             <td>${fmt.badgeEstado(s.estado_servicio)}</td>
             <td style="text-align: center; white-space: nowrap;">
-              <select class="form-control-tms select-change-status" data-id="${s.id}" style="width: 125px; display: inline-block; font-size: 11px; padding: 3px 6px;">
-                <option value="programado" ${s.estado_servicio === 'programado' ? 'selected' : ''}>Programado</option>
-                <option value="en_ruta" ${s.estado_servicio === 'en_ruta' ? 'selected' : ''}>En Ruta</option>
-                <option value="finalizado" ${s.estado_servicio === 'finalizado' ? 'selected' : ''}>Finalizado</option>
-                <option value="cancelado" ${s.estado_servicio === 'cancelado' ? 'selected' : ''}>Cancelado</option>
-              </select>
+              ${['finalizado', 'cancelado'].includes(s.estado_servicio) || !auth.can('programacion', 'editar') ? '' : `<select class="form-control-tms select-change-status" data-id="${esc(s.id)}" data-actual="${esc(s.estado_servicio)}" style="width: 125px; display: inline-block; font-size: 11px; padding: 3px 6px;">
+                <option value="programado" ${s.estado_servicio === 'programado' ? 'selected' : ''} ${s.estado_servicio === 'programado' ? '' : 'disabled'}>Programado</option>
+                <option value="en_ruta" ${s.estado_servicio === 'en_ruta' ? 'selected' : ''}>En ruta</option>
+                <option value="finalizado">Finalizado</option>
+                ${auth.can('servicios', 'anular') ? '<option value="cancelado">Anular…</option>' : ''}
+              </select>`}
             </td>
           </tr>
         `).join('');
@@ -168,13 +169,19 @@ export async function renderProgramacion(container) {
           select.addEventListener('change', async (e) => {
             const id = e.target.dataset.id;
             const estado_servicio = e.target.value;
+            let motivo;
+            if (estado_servicio === 'cancelado') {
+              motivo = prompt(`Anular el servicio #${id}. Indique el motivo:`);
+              if (!motivo || motivo.trim().length < 5) { e.target.value = e.target.dataset.actual; if (motivo !== null) showToast('Indique un motivo de al menos 5 caracteres.', 'warning'); return; }
+            }
             try {
-              const res = await api.post('servicios/cambiar_estado.php', { id, estado_servicio });
+              const res = await api.post('servicios/cambiar_estado.php', { id, estado_servicio, motivo });
               if (res.success) {
                 showToast(`Estado del servicio #${id} actualizado a ${estado_servicio}`, 'success');
                 loadProgramacion();
               }
             } catch (err) {
+              e.target.value = e.target.dataset.actual;
               showToast(err.message || 'Error al cambiar estado', 'error');
             }
           });
@@ -188,7 +195,7 @@ export async function renderProgramacion(container) {
       } else {
         contDisponibles.innerHTML = disponibles.map(c => `
           <span style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="bi bi-person-check"></i> ${c.nombre} (${c.telefono || 'Sin tel.'})
+            <i class="bi bi-person-check"></i> ${esc(c.nombre)} (${esc(c.telefono || 'Sin tel.')})
           </span>
         `).join('');
       }
