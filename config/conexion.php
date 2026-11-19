@@ -1,316 +1,150 @@
 <?php
-// config/conexion.php - Conexión central a la base de datos y utilidades para el sistema
+// config/conexion.php - Arranque común de todos los endpoints: configuración, seguridad, conexión,
+// migraciones automáticas, sesión y control de acceso por rol.
 
-// Permitir peticiones y configurar headers
-if (!headers_sent()) {
-    header("Access-Control-Allow-Origin: *");
-    header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+$VADEXSA_CONFIG = array_merge([
+    'db_host' => getenv('VADEXSA_DB_HOST') ?: 'localhost',
+    'db_user' => getenv('VADEXSA_DB_USER') ?: 'root',
+    'db_pass' => getenv('VADEXSA_DB_PASS') ?: '',
+    'db_name' => getenv('VADEXSA_DB_NAME') ?: 'transporte_db',
+    'debug' => (bool)getenv('VADEXSA_DEBUG'),
+    'session_timeout_min' => 30,
+    'allowed_origins' => [],
+    'igv_sin_comprobante' => true,
+    'igv_tasa' => 0.18,
+], is_file(__DIR__ . '/env.php') ? (array)require __DIR__ . '/env.php' : []);
+// La variable de entorno permite a las pruebas usar otra base sin tocar env.php.
+if (getenv('VADEXSA_DB_NAME')) $VADEXSA_CONFIG['db_name'] = getenv('VADEXSA_DB_NAME');
+
+date_default_timezone_set('America/Lima');
+
+// Errores: nunca mostrar detalles al cliente en producción; registrarlos en logs/ (SEG-21, ARQ-06).
+ini_set('display_errors', $VADEXSA_CONFIG['debug'] ? '1' : '0');
+ini_set('log_errors', '1');
+$logDir = __DIR__ . '/../logs';
+if (is_dir($logDir) || @mkdir($logDir, 0750, true)) {
+    ini_set('error_log', $logDir . '/php-error-' . date('Y-m') . '.log');
+}
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/permisos.php';
+require_once __DIR__ . '/migraciones.php';
+
+$esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
+// Excepciones no controladas: respuesta genérica y detalle solo en el log.
+set_exception_handler(function (Throwable $e) use ($VADEXSA_CONFIG) {
+    error_log('[' . ($_SERVER['SCRIPT_NAME'] ?? 'cli') . '] ' . get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    if (PHP_SAPI === 'cli') { fwrite(STDERR, $e->getMessage() . PHP_EOL); exit(1); }
+    global $conn;
+    if (isset($conn) && $conn instanceof mysqli) { try { mysqli_rollback($conn); } catch (Throwable $ignored) {} }
+    $msg = $VADEXSA_CONFIG['debug'] ? $e->getMessage() : 'Ocurrió un error interno. Intente nuevamente o contacte al administrador.';
+    json_response(['success' => false, 'error' => $msg], 500);
+});
+
+if (PHP_SAPI !== 'cli' && !headers_sent()) {
+    // Cabeceras de seguridad (SEG-22).
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: same-origin');
+    if ($esHttps) header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+
+    // CORS: solo el propio origen o los orígenes configurados; nunca '*' con credenciales (SEG-17).
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if ($origin !== '' && in_array($origin, (array)$VADEXSA_CONFIG['allowed_origins'], true)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
+        header('Vary: Origin');
+    }
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-// Iniciar sesión PHP si aún no está iniciada
-if (session_status() === PHP_SESSION_NONE) {
+// Sesión con cookie HttpOnly, SameSite=Lax y Secure bajo HTTPS (SEG-14).
+if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
+    ini_set('session.use_strict_mode', '1');
+    session_name('VADEXSASESSID');
+    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $esHttps, 'httponly' => true, 'samesite' => 'Lax']);
     session_start();
 }
 
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = getenv('VADEXSA_DB_NAME') ?: "transporte_db";
-date_default_timezone_set('America/Lima');
-
-$conn = mysqli_connect($host, $user, $pass, $db);
-
-if (!$conn) {
-    if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
-        http_response_code(500);
-        header("Content-Type: application/json; charset=UTF-8");
-        echo json_encode(["success" => false, "error" => "Error de conexión a la base de datos"], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    die("Error de conexión a la base de datos: " . mysqli_connect_error());
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+try {
+    $conn = mysqli_connect($VADEXSA_CONFIG['db_host'], $VADEXSA_CONFIG['db_user'], $VADEXSA_CONFIG['db_pass'], $VADEXSA_CONFIG['db_name']);
+    mysqli_set_charset($conn, 'utf8mb4');
+} catch (Throwable $e) {
+    error_log('Conexión MySQL: ' . $e->getMessage());
+    if (PHP_SAPI === 'cli') { fwrite(STDERR, 'No se pudo conectar a MySQL: ' . $e->getMessage() . PHP_EOL); exit(1); }
+    json_response(['success' => false, 'error' => 'No se pudo conectar a la base de datos. Verifique que MySQL esté iniciado.'], 503);
 }
 
-mysqli_set_charset($conn, "utf8mb4");
-
-function ensure_required_schema() {
-    global $conn;
-    if (!$conn || !($conn instanceof mysqli)) {
-        return;
-    }
-
-    $tables = [
-        'servicio_operacion' => "CREATE TABLE IF NOT EXISTS servicio_operacion (
-            servicio_id INT NOT NULL PRIMARY KEY,
-            proveedor_id INT NULL,
-            provincia VARCHAR(100) NOT NULL DEFAULT '',
-            distrito VARCHAR(100) NOT NULL DEFAULT '',
-            referencia VARCHAR(255) NOT NULL DEFAULT '',
-            contacto VARCHAR(150) NOT NULL DEFAULT '',
-            telefono VARCHAR(40) NOT NULL DEFAULT '',
-            almacen VARCHAR(150) NOT NULL DEFAULT '',
-            temporada VARCHAR(100) NOT NULL DEFAULT '',
-            frecuencia VARCHAR(100) NOT NULL DEFAULT '',
-            observaciones TEXT NULL,
-            actualizado_por VARCHAR(100) NOT NULL,
-            actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX (proveedor_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-        'gastos_adicionales' => "CREATE TABLE IF NOT EXISTS gastos_adicionales (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            servicio_id INT NULL,
-            fecha DATE NOT NULL,
-            concepto VARCHAR(255) NOT NULL,
-            monto DECIMAL(12,2) NOT NULL,
-            registrado_por VARCHAR(100) NOT NULL,
-            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX (fecha), INDEX (servicio_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-        'gastos_operativos' => "CREATE TABLE IF NOT EXISTS gastos_operativos (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            fecha DATE NOT NULL,
-            vehiculo_id INT NULL,
-            tipo VARCHAR(80) NOT NULL DEFAULT 'general',
-            descripcion VARCHAR(255) NOT NULL DEFAULT '',
-            monto DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-            registrado_por VARCHAR(100) NOT NULL DEFAULT '',
-            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX (fecha), INDEX (vehiculo_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-        'gastos_administrativos' => "CREATE TABLE IF NOT EXISTS gastos_administrativos (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            fecha DATE NOT NULL,
-            tipo VARCHAR(80) NOT NULL DEFAULT 'general',
-            descripcion VARCHAR(255) NOT NULL DEFAULT '',
-            monto DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-            registrado_por VARCHAR(100) NOT NULL DEFAULT '',
-            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX (fecha)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-        'usuario_modulos' => "CREATE TABLE IF NOT EXISTS usuario_modulos (
-            user_id INT NOT NULL,
-            modulo VARCHAR(80) NOT NULL,
-            nombre VARCHAR(120) NOT NULL,
-            descripcion VARCHAR(255) NOT NULL DEFAULT '',
-            activo TINYINT(1) NOT NULL DEFAULT 1,
-            actualizado_por VARCHAR(100) NOT NULL DEFAULT 'system',
-            actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (user_id, modulo),
-            INDEX (user_id), INDEX (modulo)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-        'servicio_abonos' => "CREATE TABLE IF NOT EXISTS servicio_abonos (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            servicio_id INT NOT NULL,
-            fecha DATE NOT NULL,
-            monto DECIMAL(12,2) NOT NULL,
-            referencia VARCHAR(255) NOT NULL,
-            registrado_por VARCHAR(100) NOT NULL,
-            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX (servicio_id), INDEX (fecha)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-    ];
-
-    foreach ($tables as $ddl) {
-        mysqli_query($conn, $ddl);
-    }
-
-    $columns = [
-        'proveedor_id' => "ALTER TABLE servicios ADD COLUMN proveedor_id INT NULL",
-        'fecha_emision' => "ALTER TABLE servicios ADD COLUMN fecha_emision DATE NULL",
-        'monto_detraccion' => "ALTER TABLE servicios ADD COLUMN monto_detraccion DECIMAL(12,2) NOT NULL DEFAULT 0.00",
-        'estado_comprobante' => "ALTER TABLE servicios ADD COLUMN estado_comprobante VARCHAR(20) NOT NULL DEFAULT 'pendiente'"
-    ];
-
-    foreach ($columns as $column => $ddl) {
-        $check = mysqli_query($conn, "SHOW COLUMNS FROM servicios LIKE '" . str_replace("'", "''", $column) . "'");
-        if (!$check || mysqli_num_rows($check) === 0) {
-            mysqli_query($conn, $ddl);
-        }
-    }
-}
-
-function get_default_user_modules() {
-    return [
-        ['modulo' => 'dashboard', 'nombre' => 'Dashboard', 'descripcion' => 'Resumen operativo, KPIs y métricas del mes.'],
-        ['modulo' => 'servicios', 'nombre' => 'Servicios', 'descripcion' => 'Registro y seguimiento de viajes y liquidaciones.'],
-        ['modulo' => 'operacion', 'nombre' => 'Control operativo', 'descripcion' => 'Seguimiento de operación, proveedores y fichas de servicio.'],
-        ['modulo' => 'programacion', 'nombre' => 'Programación', 'descripcion' => 'Calendario y coordinación operacional del día.'],
-        ['modulo' => 'clientes', 'nombre' => 'Clientes', 'descripcion' => 'Administración de clientes y contacto comercial.'],
-        ['modulo' => 'vehiculos', 'nombre' => 'Vehículos', 'descripcion' => 'Gestión de flota y disponibilidad del parque automotor.'],
-        ['modulo' => 'conductores', 'nombre' => 'Conductores', 'descripcion' => 'Control de conductores, licencias y estado.'],
-        ['modulo' => 'proveedores', 'nombre' => 'Proveedores', 'descripcion' => 'Proveedores de terceros y coordinación de servicios.'],
-        ['modulo' => 'gastos_operativos', 'nombre' => 'Gastos operativos', 'descripcion' => 'Ingresos y desembolsos del servicio y la operación.'],
-        ['modulo' => 'gastos_administrativos', 'nombre' => 'Gastos administrativos', 'descripcion' => 'Costos generales de la gestión y administración.'],
-        ['modulo' => 'reportes', 'nombre' => 'Reportes', 'descripcion' => 'Informes, cierres y análisis financiero operativo.'],
-        ['modulo' => 'cierre', 'nombre' => 'Cierre y gastos adicionales', 'descripcion' => 'Cierres de período y gastos adicionales de operación.'],
-        ['modulo' => 'cuentas', 'nombre' => 'Cuentas por cobrar', 'descripcion' => 'Abonos, cobros y saldos de servicios.'],
-        ['modulo' => 'facturas', 'nombre' => 'Facturas', 'descripcion' => 'Registro y manejo de comprobantes y pagos.'],
-        ['modulo' => 'usuarios', 'nombre' => 'Usuarios', 'descripcion' => 'Administración de accesos y gestión del personal.']
-    ];
-}
-
-function get_user_module_access($user_id) {
-    global $conn;
-    $user_id = (int)$user_id;
-    $catalog = get_default_user_modules();
-    $access = [];
-
-    $res = mysqli_query($conn, 'SELECT modulo, nombre, descripcion, activo FROM usuario_modulos WHERE user_id = ' . $user_id);
-    while ($row = mysqli_fetch_assoc($res)) {
-        $access[$row['modulo']] = [
-            'modulo' => $row['modulo'],
-            'nombre' => $row['nombre'],
-            'descripcion' => $row['descripcion'],
-            'activo' => (int)$row['activo'] === 1
-        ];
-    }
-
-    foreach ($catalog as $module) {
-        $key = $module['modulo'];
-        if (!isset($access[$key])) {
-            $defName = $module['nombre'];
-            $defDesc = $module['descripcion'];
-            $enabled = 1;
-            $updatedBy = $_SESSION['usuario'] ?? 'system';
-            $stmt = mysqli_prepare($conn, 'INSERT INTO usuario_modulos (user_id, modulo, nombre, descripcion, activo, actualizado_por) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE nombre = VALUES(nombre), descripcion = VALUES(descripcion), activo = VALUES(activo), actualizado_por = VALUES(actualizado_por)');
-            mysqli_stmt_bind_param($stmt, 'isssis', $user_id, $key, $defName, $defDesc, $enabled, $updatedBy);
-            mysqli_stmt_execute($stmt);
-            $access[$key] = [
-                'modulo' => $key,
-                'nombre' => $defName,
-                'descripcion' => $defDesc,
-                'activo' => true
-            ];
-        }
-    }
-
-    return array_values($access);
-}
-
-function require_module_access($module_name) {
-    require_auth();
-    $globalRoles = ['admin', 'administrador'];
-    $role = strtolower((string)($_SESSION['rol'] ?? ''));
-    if (in_array($role, $globalRoles, true)) {
-        return;
-    }
-
-    $access = $_SESSION['module_access'] ?? [];
-    $enabled = false;
-    foreach ($access as $entry) {
-        if (($entry['modulo'] ?? '') === $module_name && !empty($entry['activo'])) {
-            $enabled = true;
-            break;
-        }
-    }
-
-    if (!$enabled) {
-        json_response(['success' => false, 'error' => 'No tiene permiso para acceder a este módulo.'], 403);
-    }
-}
-
-ensure_required_schema();
+vadexsa_migrar_si_hace_falta($conn);
 
 /**
- * Enviar respuesta JSON estandarizada
+ * Exige sesión válida, aplica el cierre por inactividad, recarga rol y permisos desde la base
+ * y valida el token CSRF en peticiones que modifican datos.
+ * Con $verificarEndpoint = true (por defecto) aplica además la matriz de permisos del endpoint.
  */
-function json_response($data, $status = 200) {
-    if (!headers_sent()) {
-        header("Content-Type: application/json; charset=UTF-8");
-        http_response_code($status);
-    }
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    exit;
-}
-
-/**
- * Obtener datos de la petición (JSON o POST/GET)
- */
-function get_request_data() {
-    $raw = file_get_contents("php://input");
-    $json = json_decode($raw, true);
-    if (is_array($json)) {
-        return $json;
-    }
-    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        return $_GET;
-    }
-    return $_POST;
-}
-
-/**
- * Validar si existe sesión activa
- */
-function require_auth() {
-    if (!isset($_SESSION['usuario'])) {
-        json_response([
-            "success" => false,
-            "error" => "No autorizado. Inicie sesión.",
-            "auth_required" => true
-        ], 401);
-    }
-    // Revalidar permisos para que una baja o un cambio de rol sea inmediato.
+function require_auth(bool $verificarEndpoint = true): void {
     global $conn;
-    $stmt = mysqli_prepare($conn, 'SELECT id, rol, estado FROM usuarios WHERE usuario = ? LIMIT 1');
-    mysqli_stmt_bind_param($stmt, 's', $_SESSION['usuario']);
-    mysqli_stmt_execute($stmt);
-    $user = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
-    if (!$user || $user['estado'] !== 'activo') {
-        session_unset();
-        json_response(['success' => false, 'error' => 'Sesión no válida.', 'auth_required' => true], 401);
+    static $hecho = false;
+    if (!$hecho) {
+        if (empty($_SESSION['user_id'])) {
+            json_response(['success' => false, 'error' => 'No autorizado. Inicie sesión.', 'auth_required' => true], 401);
+        }
+        $timeout = max(5, (int)vadexsa_config('session_timeout_min', 30)) * 60;
+        if (isset($_SESSION['ultima_actividad']) && time() - (int)$_SESSION['ultima_actividad'] > $timeout) {
+            session_unset();
+            session_destroy();
+            json_response(['success' => false, 'error' => 'La sesión se cerró por inactividad. Inicie sesión nuevamente.', 'auth_required' => true], 401);
+        }
+        $_SESSION['ultima_actividad'] = time();
+
+        // Revalidar en cada petición: una baja o un cambio de rol se aplica de inmediato.
+        if (!sesion_cargar_usuario($conn, (int)$_SESSION['user_id'])) {
+            session_unset();
+            json_response(['success' => false, 'error' => 'Sesión no válida.', 'auth_required' => true], 401);
+        }
+
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+            csrf_verificar();
+        }
+        $hecho = true;
     }
-    $_SESSION['rol'] = $user['rol'];
+    if ($verificarEndpoint) {
+        // Mientras deba cambiar la contraseña inicial solo puede usar ese endpoint (SEG-28).
+        $script = basename(dirname($_SERVER['SCRIPT_FILENAME'] ?? '')) . '/' . basename($_SERVER['SCRIPT_FILENAME'] ?? '');
+        if (!empty($_SESSION['debe_cambiar_password']) && $script !== 'usuarios/mi_password.php') {
+            json_response(['success' => false, 'error' => 'Debe cambiar su contraseña antes de continuar.', 'password_change_required' => true], 403);
+        }
+        rbac_verificar_endpoint();
+    }
+}
+
+/** Carga en la sesión los datos, el rol y los permisos vigentes del usuario. Devuelve false si no está activo. */
+function sesion_cargar_usuario(mysqli $conn, int $userId): bool {
+    $user = db_one($conn, 'SELECT id, usuario, nombre, rol, estado, cliente_id, debe_cambiar_password FROM usuarios WHERE id = ? LIMIT 1', 'i', [$userId]);
+    if (!$user || $user['estado'] !== 'activo') return false;
+    // Un usuario con rol cliente sin cliente asociado no puede ver nada del portal (SEG-09).
     $_SESSION['user_id'] = (int)$user['id'];
-    $_SESSION['module_access'] = get_user_module_access((int)$user['id']);
-    $scriptPath = $_SERVER['SCRIPT_FILENAME'] ?? '';
-    $module = basename(dirname($scriptPath));
-    $scriptName = basename($scriptPath);
-    if (in_array(strtolower($user['rol']), ['admin', 'administrador'], true)) {
-        return;
-    }
+    $_SESSION['usuario'] = $user['usuario'];
+    $_SESSION['nombre'] = $user['nombre'] ?: $user['usuario'];
+    $_SESSION['rol'] = $user['rol'];
+    $_SESSION['cliente_id'] = $user['cliente_id'] !== null ? (int)$user['cliente_id'] : null;
+    $_SESSION['debe_cambiar_password'] = (int)$user['debe_cambiar_password'] === 1;
+    $_SESSION['permisos'] = rbac_cargar_permisos($conn, (string)$user['rol']);
+    return true;
+}
 
-    $permissionModule = [
-        'dashboard' => 'dashboard',
-        'servicios' => 'servicios',
-        'clientes' => 'clientes',
-        'vehiculos' => 'vehiculos',
-        'conductores' => 'conductores',
-        'proveedores' => 'proveedores',
-        'gastos_operativos' => 'gastos_operativos',
-        'gastos_administrativos' => 'gastos_administrativos',
-        'gastos_adicionales' => 'cierre',
-        'facturas' => 'facturas',
-        'reportes' => 'reportes',
-        'usuarios' => 'usuarios',
-        'chatbot' => 'dashboard'
-    ][$module] ?? null;
-    if ($module === 'servicios' && $scriptName === 'programacion.php') {
-        $permissionModule = 'programacion';
-    } elseif ($module === 'servicios' && $scriptName === 'operacion.php') {
-        $permissionModule = 'operacion';
-    } elseif ($module === 'conductores' && $scriptName === 'disponibles.php') {
-        $permissionModule = 'programacion';
-    } elseif ($module === 'facturas' && $scriptName === 'cuentas.php') {
-        $permissionModule = 'cuentas';
-    } elseif ($module === 'reportes' && $scriptName === 'cierre.php') {
-        $permissionModule = 'cierre';
-    }
-    if ($permissionModule !== null) {
-        $enabled = false;
-        foreach ($_SESSION['module_access'] as $entry) {
-            if (($entry['modulo'] ?? '') === $permissionModule && !empty($entry['activo'])) {
-                $enabled = true;
-                break;
-            }
-        }
-        if (!$enabled) {
-            json_response(['success' => false, 'error' => 'No tiene permiso para acceder a este módulo.'], 403);
-        }
+/** Compatibilidad con el código anterior. */
+function require_admin(): void {
+    require_auth(false);
+    if (!rbac_es_admin()) {
+        json_response(['success' => false, 'error' => 'Esta función requiere el rol de administrador.'], 403);
     }
 }
-?>

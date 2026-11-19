@@ -1,5 +1,6 @@
 // frontend/js/modules/servicios.js - Gestión integral de Servicios y Liquidaciones
-import { api, showToast, fmt, exportTableToExcel } from '../api.js';
+import { api, showToast, fmt, exportTableToExcel, esc } from '../api.js';
+import { auth } from './auth.js';
 
 export async function renderServicios(container) {
   let allServicios = [];
@@ -7,9 +8,10 @@ export async function renderServicios(container) {
   let clientesList = [];
   let vehiculosList = [];
   let conductoresList = [];
-  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-  }[char]));
+  let proveedoresList = [];
+  let editingVersion = null;
+  const escapeHtml = esc;
+  const puede = accion => auth.can('servicios', accion);
 
   container.innerHTML = `
     <div class="page-title-box">
@@ -35,13 +37,13 @@ export async function renderServicios(container) {
         <button id="btn-servicios-refresh" class="btn-tms btn-tms-default">
           <i class="bi bi-arrow-clockwise"></i> Actualizar
         </button>
-        <button id="btn-servicios-nuevo" class="btn-tms btn-tms-primary">
+        <button id="btn-servicios-nuevo" class="btn-tms btn-tms-primary" ${puede('crear') ? '' : 'hidden'}>
           <i class="bi bi-plus-circle"></i> Nuevo Servicio
         </button>
         <button id="btn-servicios-imprimir" class="btn-tms btn-tms-default">
           <i class="bi bi-printer"></i> Imprimir
         </button>
-        <button id="btn-servicios-excel" class="btn-tms btn-tms-default">
+        <button id="btn-servicios-excel" class="btn-tms btn-tms-default" ${puede('exportar') ? '' : 'hidden'}>
           <i class="bi bi-file-earmark-excel"></i> Excel
         </button>
       </div>
@@ -63,14 +65,14 @@ export async function renderServicios(container) {
             <th>ID</th>
             <th>Fecha / Hora</th>
             <th>Cliente</th>
-            <th>Vehículo</th>
+            <th>Vehículo / proveedor</th>
             <th>Conductor</th>
             <th>Origen → Destino</th>
             <th>G. Remitente</th>
             <th>G. Transportista</th>
             <th>Comprobante</th>
             <th style="text-align: right;">Monto (S/)</th>
-            <th style="text-align: right;">Utilidad (S/)</th>
+            <th style="text-align: right;" title="Base imponible sin IGV − costo del proveedor">Margen sin IGV (S/)</th>
             <th style="text-align: center;">Estado</th>
             <th class="no-export" style="text-align: center;">Acciones</th>
           </tr>
@@ -114,8 +116,14 @@ export async function renderServicios(container) {
               </div>
 
               <div class="col-3 form-group">
-                <label class="form-label">Hora</label>
-                <input type="time" id="srv-hora" name="hora_servicio" class="form-control-tms">
+                <label class="form-label">Hora de inicio *</label>
+                <input type="time" id="srv-hora" name="hora_servicio" class="form-control-tms" required>
+              </div>
+
+              <div class="col-3 form-group">
+                <label class="form-label">Hora fin estimada *</label>
+                <input type="time" id="srv-hora-fin" name="hora_fin_estimada" class="form-control-tms" required>
+                <small class="muted">Si es menor que el inicio, el viaje termina al día siguiente.</small>
               </div>
 
               <div class="col-6 form-group">
@@ -137,6 +145,18 @@ export async function renderServicios(container) {
                 <select id="srv-conductor" name="conductor_id" class="form-control-tms" required>
                   <option value="">Seleccione un conductor</option>
                 </select>
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label">Proveedor (servicio tercerizado) *</label>
+                <select id="srv-proveedor" name="proveedor_id" class="form-control-tms">
+                  <option value="">Seleccione un proveedor</option>
+                </select>
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label">Costo del proveedor sin IGV (S/) *</label>
+                <input type="number" step="0.01" min="0" id="srv-costo-proveedor" name="costo_proveedor" class="form-control-tms" placeholder="0.00">
               </div>
 
               <div class="col-3 form-group">
@@ -191,16 +211,12 @@ export async function renderServicios(container) {
 
               <div class="col-4 form-group">
                 <label class="form-label">Precio Cliente (S/) *</label>
-                <input type="number" step="0.01" id="srv-precio-cliente" name="precio_cliente" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #1e293b;">
+                <input type="number" step="0.01" min="0.01" id="srv-precio-cliente" name="precio_cliente" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #1e293b;">
               </div>
 
-              <div class="col-4 form-group">
-                <label class="form-label">Costo Proveedor (S/)</label>
-                <input type="number" step="0.01" id="srv-costo-proveedor" name="costo_proveedor" class="form-control-tms" placeholder="0.00" disabled>
-              </div>
 
               <div class="col-4 form-group">
-                <label class="form-label">Comprobante *</label>
+                <label class="form-label">Comprobante a emitir *</label>
                 <select id="srv-tipo-comprobante" name="tipo_comprobante" class="form-control-tms">
                   <option value="FACTURA">FACTURA</option>
                   <option value="BOLETA">BOLETA</option>
@@ -219,8 +235,12 @@ export async function renderServicios(container) {
               </div>
 
               <div class="col-4 form-group">
-                <label class="form-label">N° Factura / Boleta</label>
-                <input type="text" id="srv-factura" name="numero_factura" class="form-control-tms" placeholder="Generado automático">
+                <label class="form-label">Peso de la carga (kg)</label>
+                <input type="number" step="0.01" min="0" id="srv-peso" name="peso_kg" class="form-control-tms" placeholder="Opcional">
+              </div>
+
+              <div class="col-12 form-group">
+                <small class="muted" id="srv-nota-comprobante">El comprobante se registra en Facturación cuando el servicio finaliza. Montos calculados en el servidor.</small>
               </div>
 
               <div class="col-4 form-group">
@@ -239,7 +259,6 @@ export async function renderServicios(container) {
                   <option value="programado">Programado</option>
                   <option value="en_ruta">En Ruta</option>
                   <option value="finalizado">Finalizado / Liquidado</option>
-                  <option value="cancelado">Cancelado</option>
                 </select>
               </div>
 
@@ -267,7 +286,6 @@ export async function renderServicios(container) {
   const comprobanteSelect = document.getElementById('srv-tipo-comprobante');
   const baseInput = document.getElementById('srv-base');
   const igvInput = document.getElementById('srv-igv');
-  const facturaInput = document.getElementById('srv-factura');
   const modalidadSelect = document.getElementById('srv-modalidad');
   const guiaTransInput = document.getElementById('srv-guia-trans');
   const wizardSteps = 4;
@@ -279,9 +297,9 @@ export async function renderServicios(container) {
   }
 
   const wizardFields = {
-    1: ['srv-fecha', 'srv-hora', 'srv-cliente'],
+    1: ['srv-fecha', 'srv-hora', 'srv-hora-fin', 'srv-cliente'],
     2: ['srv-modalidad'],
-    3: ['srv-vehiculo', 'srv-conductor']
+    3: ['srv-vehiculo', 'srv-conductor', 'srv-proveedor', 'srv-costo-proveedor']
   };
   const wizardContainers = new Map();
   for (const [step, fieldIds] of Object.entries(wizardFields)) {
@@ -295,11 +313,12 @@ export async function renderServicios(container) {
     const values = [
       ['Cliente', document.getElementById('srv-cliente').selectedOptions[0]?.textContent],
       ['Modalidad', modalidadSelect.selectedOptions[0]?.textContent],
-      ['Vehículo', document.getElementById('srv-vehiculo').selectedOptions[0]?.textContent],
-      ['Conductor', document.getElementById('srv-conductor').selectedOptions[0]?.textContent],
+      ...(modalidadSelect.value === 'tercerizado'
+        ? [['Proveedor', document.getElementById('srv-proveedor').selectedOptions[0]?.textContent], ['Costo proveedor', fmt.moneda(costoInput.value)]]
+        : [['Vehículo', document.getElementById('srv-vehiculo').selectedOptions[0]?.textContent], ['Conductor', document.getElementById('srv-conductor').selectedOptions[0]?.textContent]]),
       ['Servicio', document.getElementById('srv-tipo-servicio').value],
       ['Ruta', `${document.getElementById('srv-origen').value || '—'} → ${document.getElementById('srv-destino').value || '—'}`],
-      ['Fecha y hora', `${document.getElementById('srv-fecha').value || '—'} ${document.getElementById('srv-hora').value || ''}`],
+      ['Fecha y horario', `${document.getElementById('srv-fecha').value || '—'} ${document.getElementById('srv-hora').value || ''} – ${document.getElementById('srv-hora-fin').value || ''}`],
       ['Total', fmt.moneda(precioInput.value)]
     ];
     document.getElementById('srv-wizard-review').innerHTML = `
@@ -309,8 +328,9 @@ export async function renderServicios(container) {
 
   function setWizardStep(step) {
     wizardStep = Math.min(wizardSteps, Math.max(1, step));
+    applyModalidad();
     for (const [fieldContainer, fieldStep] of wizardContainers) {
-      fieldContainer.hidden = fieldStep !== wizardStep;
+      fieldContainer.hidden = fieldStep !== wizardStep || fieldContainer.dataset.modalidadOculto === '1';
     }
     document.querySelectorAll('#srv-wizard-progress [data-step-indicator]').forEach(indicator => {
       const number = Number(indicator.dataset.stepIndicator);
@@ -324,7 +344,7 @@ export async function renderServicios(container) {
     document.getElementById('srv-wizard-help').textContent = [
       'Paso 1 de 4: seleccione el cliente y programe fecha y hora.',
       'Paso 2 de 4: indique si utilizará flota propia o un servicio tercerizado.',
-      'Paso 3 de 4: seleccione un vehículo y un conductor disponibles para ese horario.',
+      modalidadSelect.value === 'tercerizado' ? 'Paso 3 de 4: seleccione el proveedor y su costo (sin IGV). No se ocupa flota propia.' : 'Paso 3 de 4: seleccione un vehículo y un conductor activos y libres en ese horario.',
       'Paso 4 de 4: complete la ruta, los importes y los datos de facturación.'
     ][wizardStep - 1];
     if (wizardStep === wizardSteps) renderWizardReview();
@@ -336,19 +356,21 @@ export async function renderServicios(container) {
     const selectedVehicle = vehicleSelect.value;
     const selectedDriver = driverSelect.value;
     const date = document.getElementById('srv-fecha').value;
-    const time = document.getElementById('srv-hora').value.slice(0, 5);
-    const busy = allServicios.filter(service =>
-      String(service.id) !== String(editingServiceId) &&
-      service.fecha_servicio === date &&
-      String(service.hora_servicio || '').slice(0, 5) === time &&
-      service.estado_servicio !== 'cancelado'
-    );
+    const [ini, fin] = intervalo(date, document.getElementById('srv-hora').value, document.getElementById('srv-hora-fin').value);
+    // Ocupados: servicios cuyo intervalo se solapa con el nuevo (NEG-06). El servidor vuelve a validarlo.
+    const busy = allServicios.filter(service => {
+      if (String(service.id) === String(editingServiceId) || service.estado_servicio === 'cancelado' || !ini) return false;
+      const [i2, f2] = intervalo(service.fecha_servicio, service.hora_servicio, service.hora_fin_estimada);
+      return i2 && ini < f2 && fin > i2;
+    });
     const availableVehicles = vehiculosList.filter(vehicle =>
       String(vehicle.estado || 'activo').toLowerCase() === 'activo' &&
+      (!date || ((!vehicle.soat_vencimiento || vehicle.soat_vencimiento >= date) && (!vehicle.revision_vencimiento || vehicle.revision_vencimiento >= date))) &&
       (!busy.some(service => String(service.vehiculo_id) === String(vehicle.id)) || String(vehicle.id) === selectedVehicle)
     );
     const availableDrivers = conductoresList.filter(driver =>
       String(driver.estado || 'activo').toLowerCase() === 'activo' &&
+      (!driver.licencia_vencimiento || !date || driver.licencia_vencimiento >= date) &&
       (!busy.some(service => String(service.conductor_id) === String(driver.id)) || String(driver.id) === selectedDriver)
     );
     vehicleSelect.innerHTML = '<option value="">Seleccione un vehículo disponible</option>' +
@@ -359,47 +381,60 @@ export async function renderServicios(container) {
     if (availableDrivers.some(driver => String(driver.id) === selectedDriver)) driverSelect.value = selectedDriver;
   }
 
+  // Vista previa; el servidor recalcula siempre (NEG-16). Una operación gravada genera IGV aunque no se emita comprobante (NEG-17).
   function calcularIGV() {
     const monto = parseFloat(precioInput.value) || 0;
-    const tipo = comprobanteSelect.value;
+    const base = Math.round(monto / 1.18 * 100) / 100;
+    baseInput.value = base.toFixed(2);
+    igvInput.value = (monto - base).toFixed(2);
+  }
 
-    if (tipo === 'SIN_COMPROBANTE') {
-      baseInput.value = monto.toFixed(2);
-      igvInput.value = '0.00';
-      facturaInput.value = '';
-      facturaInput.disabled = true;
-    } else {
-      facturaInput.disabled = false;
-      const base = monto / 1.18;
-      const igv = monto - base;
-      baseInput.value = base.toFixed(2);
-      igvInput.value = igv.toFixed(2);
-    }
+  function intervalo(fecha, horaIni, horaFin) {
+    if (!fecha || !horaIni) return [null, null];
+    const i = new Date(`${fecha}T${String(horaIni).slice(0, 5)}:00`);
+    const fTxt = String(horaFin || '').slice(0, 5);
+    let f = fTxt ? new Date(`${fecha}T${fTxt}:00`) : new Date(i.getTime() + 4 * 3600e3);
+    if (f <= i) f = new Date(f.getTime() + 24 * 3600e3);
+    return [i, f];
+  }
+
+  function applyModalidad() {
+    const terc = modalidadSelect.value === 'tercerizado';
+    const set = (id, oculto) => {
+      const el = document.getElementById(id);
+      const box = getFieldContainer(id);
+      if (box) box.dataset.modalidadOculto = oculto ? '1' : '0';
+      if (el) { el.required = !oculto; el.disabled = oculto; }
+    };
+    set('srv-vehiculo', terc);
+    set('srv-conductor', terc);
+    set('srv-proveedor', !terc);
+    set('srv-costo-proveedor', !terc);
   }
 
   precioInput.addEventListener('input', calcularIGV);
   comprobanteSelect.addEventListener('change', calcularIGV);
 
   modalidadSelect.addEventListener('change', () => {
-    if (modalidadSelect.value === 'propio') {
-      costoInput.value = '';
-      costoInput.disabled = true;
-    } else {
-      costoInput.disabled = false;
-    }
+    if (modalidadSelect.value === 'propio') costoInput.value = '';
+    applyModalidad();
   });
 
   async function loadSelectOptions() {
     try {
-      const [cRes, vRes, coRes] = await Promise.all([
+      const [cRes, vRes, coRes, pRes] = await Promise.all([
         api.get('clientes/index.php'),
         api.get('vehiculos/index.php'),
-        api.get('conductores/index.php')
+        api.get('conductores/index.php'),
+        api.get('proveedores/index.php')
       ]);
 
       clientesList = cRes.data || [];
       vehiculosList = vRes.data || [];
       conductoresList = coRes.data || [];
+      proveedoresList = (pRes.data || []).filter(p => (p.estado || 'activo') === 'activo');
+      document.getElementById('srv-proveedor').innerHTML = '<option value="">Seleccione un proveedor</option>' +
+        proveedoresList.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.nombre)}${p.placa ? ' · ' + escapeHtml(p.placa) : ''}</option>`).join('');
 
       const clienteSel = document.getElementById('srv-cliente');
       clienteSel.innerHTML = '<option value="">Seleccione un cliente</option>' +
@@ -421,7 +456,7 @@ export async function renderServicios(container) {
         renderTable();
       }
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="14" role="alert" style="text-align:center;padding:25px;color:#991b1b;">${err.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="14" role="alert" style="text-align:center;padding:25px;color:#991b1b;">${escapeHtml(err.message)}</td></tr>`;
       showToast(err.message || 'Error al cargar servicios', 'error');
     }
   }
@@ -438,7 +473,7 @@ export async function renderServicios(container) {
       }
 
       if (q) {
-        const text = `${s.id} ${s.cliente} ${s.placa} ${s.conductor} ${s.origen} ${s.destino} ${s.guia_remitente} ${s.guia_transportista} ${s.numero_factura} ${s.estado_servicio}`.toLowerCase();
+        const text = `${s.id} ${s.cliente} ${s.placa} ${s.conductor} ${s.origen} ${s.destino} ${s.guia_remitente} ${s.guia_transportista} ${s.comprobante} ${s.proveedor} ${s.estado_servicio}`.toLowerCase();
         return text.includes(q);
       }
       return true;
@@ -446,7 +481,7 @@ export async function renderServicios(container) {
 
     document.getElementById('servicios-contador').textContent = `Mostrando ${filtered.length} de ${allServicios.length} servicios`;
     const totalSuma = filtered.reduce((acc, curr) => acc + (parseFloat(curr.precio_cliente) || 0), 0);
-    document.getElementById('servicios-total-monto').textContent = `Total Facturación: ${fmt.moneda(totalSuma)}`;
+    document.getElementById('servicios-total-monto').textContent = `Total (con IGV): ${fmt.moneda(totalSuma)}`;
 
     if (filtered.length === 0) {
       tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; padding: 30px; color: #64748b;">No se encontraron servicios en esta sección.</td></tr>`;
@@ -457,39 +492,42 @@ export async function renderServicios(container) {
       const st = (s.estado_servicio || 'programado').toLowerCase();
       let actionPill = '';
       
-      if (st === 'programado') {
-        actionPill = `<button class="btn-pill-action" data-action="status" data-id="${s.id}" data-newstatus="en_ruta" title="Poner en ruta"><i class="bi bi-play-fill"></i> Iniciar</button>`;
-      } else if (st === 'en_ruta') {
-        actionPill = `<button class="btn-pill-action" data-action="status" data-id="${s.id}" data-newstatus="finalizado" style="background:#16a34a;" title="Liquidar servicio"><i class="bi bi-check-lg"></i> Liquidar</button>`;
+      const sid = escapeHtml(s.id);
+      if (st === 'programado' && puede('editar')) {
+        actionPill = `<button class="btn-pill-action" data-action="status" data-id="${sid}" data-newstatus="en_ruta" title="Poner en ruta"><i class="bi bi-play-fill"></i> Iniciar</button>`;
+      } else if (st === 'en_ruta' && puede('editar')) {
+        actionPill = `<button class="btn-pill-action" data-action="status" data-id="${sid}" data-newstatus="finalizado" style="background:#16a34a;" title="Finalizar servicio"><i class="bi bi-check-lg"></i> Finalizar</button>`;
       }
 
       return `
         <tr>
-          <td style="text-align: center;"><input type="checkbox" class="srv-checkbox" value="${s.id}"></td>
-          <td><strong>#${s.id}</strong></td>
+          <td style="text-align: center;"><input type="checkbox" class="srv-checkbox" value="${sid}"></td>
+          <td><strong>#${sid}</strong></td>
           <td>
-            <div>${fmt.fecha(s.fecha_servicio)}</div>
-            <small style="color: #64748b;">${fmt.hora(s.hora_servicio)}</small>
+            <div>${escapeHtml(fmt.fecha(s.fecha_servicio))}</div>
+            <small style="color: #64748b;">${escapeHtml(fmt.hora(s.hora_servicio))}–${escapeHtml(fmt.hora(s.hora_fin_estimada))}</small>
           </td>
-          <td><strong>${s.cliente || '-'}</strong></td>
-          <td><span class="badge-status" style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;">${s.placa || '-'}</span></td>
-          <td>${s.conductor || '-'}</td>
+          <td><strong>${escapeHtml(s.cliente || '-')}</strong></td>
+          <td><span class="badge-status" style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;">${escapeHtml(s.modalidad === 'tercerizado' ? (s.proveedor || 'Tercerizado') : (s.placa || '-'))}</span></td>
+          <td>${escapeHtml(s.modalidad === 'tercerizado' ? 'Del proveedor' : (s.conductor || '-'))}</td>
           <td>
-            <div style="font-size: 11px;">${s.origen || '-'}</div>
-            <div style="font-size: 11px; color:#64748b;"><i class="bi bi-arrow-down-right"></i> ${s.destino || '-'}</div>
+            <div style="font-size: 11px;">${escapeHtml(s.origen || '-')}</div>
+            <div style="font-size: 11px; color:#64748b;"><i class="bi bi-arrow-down-right"></i> ${escapeHtml(s.destino || '-')}</div>
           </td>
-          <td><small>${s.guia_remitente || '-'}</small></td>
-          <td><code style="color: #0284c7; font-weight: 600;">${s.guia_transportista || '-'}</code></td>
+          <td><small>${escapeHtml(s.guia_remitente || '-')}</small></td>
+          <td><code style="color: #0284c7; font-weight: 600;">${escapeHtml(s.guia_transportista || '-')}</code></td>
           <td>
-            <small style="font-weight: 600;">${s.numero_factura || s.tipo_comprobante}</small>
+            <small style="font-weight: 600;">${escapeHtml(s.comprobante || (st === 'cancelado' ? '—' : st === 'finalizado' && s.tipo_comprobante !== 'SIN_COMPROBANTE' ? 'Por facturar' : s.tipo_comprobante))}</small>
           </td>
           <td style="text-align: right; font-weight: 700; color: #1e293b;">${fmt.moneda(s.precio_cliente)}</td>
-          <td style="text-align: right; font-weight: 600; color: ${s.utilidad >= 0 ? '#15803d' : '#dc2626'};">${fmt.moneda(s.utilidad)}</td>
+          <td style="text-align: right; font-weight: 600; color: ${Number(s.utilidad) >= 0 ? '#15803d' : '#dc2626'};">${fmt.moneda(s.utilidad)}</td>
           <td style="text-align: center;">${fmt.badgeEstado(s.estado_servicio)}</td>
           <td class="no-export" style="text-align: center; white-space: nowrap;">
             ${actionPill}
-            <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${s.id}" title="Editar"><i class="bi bi-pencil"></i></button>
-            <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${s.id}" title="Eliminar"><i class="bi bi-trash"></i></button>
+            ${puede('editar') && st !== 'cancelado' ? `<button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${sid}" title="Editar"><i class="bi bi-pencil"></i></button>` : ''}
+            ${puede('anular') && (st === 'programado' || st === 'en_ruta') && !s.comprobante_id ? `<button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${sid}" title="Anular servicio"><i class="bi bi-x-octagon"></i></button>` : ''}
+            <a class="btn-pill-action" href="../servicios/imprimir.php?id=${encodeURIComponent(s.id)}" target="_blank" rel="noopener" title="Imprimir orden"><i class="bi bi-printer"></i></a>
+            ${st === 'cancelado' && s.motivo_cancelacion ? `<br><small title="Motivo">${escapeHtml(s.motivo_cancelacion)}</small>` : ''}
           </td>
         </tr>
       `;
@@ -519,16 +557,19 @@ export async function renderServicios(container) {
     } else if (action === 'edit') {
       openEditModal(id);
     } else if (action === 'delete') {
-      if (confirm(`¿Está seguro de eliminar el servicio #${id}? Esta acción no se puede deshacer.`)) {
+      const motivo = prompt(`Anular el servicio #${id}. Se conserva en el historial.\nIndique el motivo:`);
+      if (motivo && motivo.trim().length >= 5) {
         try {
-          const res = await api.delete('servicios/eliminar.php', { id });
+          const res = await api.post('servicios/eliminar.php', { id, motivo: motivo.trim() });
           if (res.success) {
-            showToast(`Servicio #${id} eliminado`, 'success');
+            showToast(res.message || `Servicio #${id} anulado`, 'success');
             loadServicios();
           }
         } catch (err) {
-          showToast(err.message || 'Error al eliminar', 'error');
+          showToast(err.message || 'Error al anular', 'error');
         }
+      } else if (motivo !== null) {
+        showToast('Indique un motivo de al menos 5 caracteres.', 'warning');
       }
     }
   }
@@ -540,15 +581,16 @@ export async function renderServicios(container) {
     document.getElementById('modal-servicio-titulo').innerHTML = `<i class="bi bi-truck"></i> Registrar Nuevo Servicio`;
     document.getElementById('srv-fecha').value = new Date().toISOString().split('T')[0];
     document.getElementById('srv-hora').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
-    costoInput.disabled = true;
+    const finDefault = new Date(Date.now() + 4 * 3600e3).toTimeString().slice(0, 5);
+    document.getElementById('srv-hora-fin').value = finDefault;
+    editingVersion = null;
+    comprobanteSelect.disabled = false;
+    precioInput.disabled = false;
     renderAssignmentOptions();
 
     try {
-      const res = await api.get('servicios/correlativo.php', { tipo_comprobante: 'FACTURA' });
-      if (res.success) {
-        guiaTransInput.value = res.guia_transportista;
-        facturaInput.value = res.numero_factura;
-      }
+      const res = await api.get('servicios/correlativo.php');
+      if (res.success) guiaTransInput.value = res.guia_transportista;
     } catch (e) {}
 
     calcularIGV();
@@ -563,7 +605,18 @@ export async function renderServicios(container) {
         const s = res.data;
         editingServiceId = String(s.id);
         document.getElementById('srv-id').value = s.id;
-        document.getElementById('modal-servicio-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Servicio #${s.id}`;
+        document.getElementById('modal-servicio-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Servicio #${escapeHtml(s.id)}`;
+        editingVersion = s.version;
+        document.getElementById('srv-hora-fin').value = (s.hora_fin_estimada || '').substring(0, 5);
+        document.getElementById('srv-proveedor').value = s.proveedor_id || '';
+        document.getElementById('srv-peso').value = s.peso_kg || '';
+        // NEG-15: con comprobante vigente no se cambian importes ni tipo de comprobante.
+        const bloqueado = Boolean(s.comprobante_id);
+        precioInput.disabled = bloqueado;
+        comprobanteSelect.disabled = bloqueado;
+        document.getElementById('srv-nota-comprobante').textContent = bloqueado
+          ? `Servicio facturado (${s.comprobante}). Importes bloqueados; corrija con nota de crédito en Facturación.`
+          : 'El comprobante se registra en Facturación cuando el servicio finaliza. Montos calculados en el servidor.';
         document.getElementById('srv-fecha').value = s.fecha_servicio || '';
         document.getElementById('srv-hora').value = (s.hora_servicio || '').substring(0, 5);
         document.getElementById('srv-cliente').value = s.cliente_id || '';
@@ -581,14 +634,7 @@ export async function renderServicios(container) {
         document.getElementById('srv-tipo-comprobante').value = s.tipo_comprobante || 'FACTURA';
         document.getElementById('srv-guia-rem').value = s.guia_remitente || '';
         document.getElementById('srv-guia-trans').value = s.guia_transportista || '';
-        document.getElementById('srv-factura').value = s.numero_factura || '';
         document.getElementById('srv-estado').value = s.estado_servicio || 'programado';
-
-        if (s.modalidad === 'propio') {
-          costoInput.disabled = true;
-        } else {
-          costoInput.disabled = false;
-        }
 
         calcularIGV();
         setWizardStep(1);
@@ -611,6 +657,7 @@ export async function renderServicios(container) {
   document.getElementById('btn-servicio-anterior').addEventListener('click', () => setWizardStep(wizardStep - 1));
   document.getElementById('srv-fecha').addEventListener('change', renderAssignmentOptions);
   document.getElementById('srv-hora').addEventListener('change', renderAssignmentOptions);
+  document.getElementById('srv-hora-fin').addEventListener('change', renderAssignmentOptions);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -628,9 +675,13 @@ export async function renderServicios(container) {
       id: id || undefined,
       fecha_servicio: document.getElementById('srv-fecha').value,
       hora_servicio: document.getElementById('srv-hora').value,
+      hora_fin_estimada: document.getElementById('srv-hora-fin').value,
       cliente_id: document.getElementById('srv-cliente').value,
       vehiculo_id: document.getElementById('srv-vehiculo').value,
       conductor_id: document.getElementById('srv-conductor').value,
+      proveedor_id: document.getElementById('srv-proveedor').value,
+      peso_kg: document.getElementById('srv-peso').value,
+      version: editingVersion ?? undefined,
       tipo_servicio: document.getElementById('srv-tipo-servicio').value,
       tipo_carga: document.getElementById('srv-tipo-carga').value,
       modalidad: document.getElementById('srv-modalidad').value,
@@ -641,8 +692,6 @@ export async function renderServicios(container) {
       costo_proveedor: document.getElementById('srv-costo-proveedor').value,
       tipo_comprobante: document.getElementById('srv-tipo-comprobante').value,
       guia_remitente: document.getElementById('srv-guia-rem').value,
-      guia_transportista: document.getElementById('srv-guia-trans').value,
-      numero_factura: document.getElementById('srv-factura').value,
       estado_servicio: document.getElementById('srv-estado').value,
     };
 
@@ -659,7 +708,7 @@ export async function renderServicios(container) {
       }
 
       if (res.success) {
-        showToast(res.message || 'Servicio guardado exitosamente', 'success');
+        showToast(res.message || 'Servicio guardado exitosamente', res.avisos?.length ? 'warning' : 'success');
         modal.classList.remove('show');
         loadServicios();
       }

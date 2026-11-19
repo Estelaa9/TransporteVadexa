@@ -1,3 +1,5 @@
+> **Versión 2.2 (18/11/2026):** este documento describe versiones anteriores. Los cambios de la auditoría v2.1 y las tres mejoras (roles y permisos, facturación y cuentas por cobrar, análisis integral) están en [docs/CAMBIOS_AUDITORIA.md](docs/CAMBIOS_AUDITORIA.md). Instalación: [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
 # 🚚 PORTAL DEL CLIENTE - VADEXSA LOGISTIC
 
 **Fecha de creación:** 7 de octubre de 2026  

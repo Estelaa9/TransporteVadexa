@@ -1,29 +1,7 @@
 <?php
-// conductores/eliminar.php - Eliminar conductor
-require_once __DIR__ . "/../config/conexion.php";
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../config/crud.php';
 require_auth();
-
-$data = get_request_data();
-$id = (int)($_GET['id'] ?? $data['id'] ?? 0);
-
-if (!$id) {
-    json_response(["success" => false, "error" => "ID no especificado."], 400);
-}
-
-// Verificar si tiene servicios asociados
-$chk = mysqli_query($conn, "SELECT id FROM servicios WHERE conductor_id = $id LIMIT 1");
-if (mysqli_num_rows($chk) > 0) {
-    json_response(["success" => false, "error" => "No se puede eliminar el conductor porque tiene servicios asociados en el historial."], 409);
-}
-
-$sql = "DELETE FROM conductores WHERE id = $id";
-if (mysqli_query($conn, $sql)) {
-    if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || $_SERVER['REQUEST_METHOD'] === 'DELETE' || $_SERVER['REQUEST_METHOD'] === 'POST') {
-        json_response(["success" => true, "message" => "Conductor eliminado correctamente."]);
-    }
-    header("Location: index.php");
-    exit;
-} else {
-    json_response(["success" => false, "error" => "Error al eliminar: " . mysqli_error($conn)], 500);
-}
-?>
+crud_ejecutar(fn() => crud_eliminar($conn, 'conductores', 'Conductor', [
+    ['servicios', 'conductor_id', 'El conductor tiene servicios en el historial; cámbielo a Inactivo en lugar de eliminarlo.'],
+]));

@@ -1256,3 +1256,46 @@ body {
 .gestion-legend { background:#eff6ff; border-left:3px solid #2563eb; padding:12px; color:#334155; }
 [hidden] { display:none !important; }
 @media print { .gestion-grid, details, .tms-toolbar, .no-export { display:none !important; } .tms-table-container { overflow:visible; } }
+
+/* ===== Mejoras v2.2: alertas, estados de comprobante/pago, matriz de permisos y análisis ===== */
+.alert-tms { padding: 16px 20px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; margin-bottom: 16px; }
+.alert-tms h5 { margin: 0 0 6px; font-size: 15px; }
+.alert-tms p { margin: 0 0 10px; }
+.alert-tms.danger { background: #fee2e2; border-color: #fecdd3; color: #991b1b; }
+.alert-tms.warning { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+.alert-tms.info { background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; }
+.alert-tms.success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+.fac-pendiente { background: #fef3c7; color: #92400e; }
+.fac-parcial { background: #dbeafe; color: #1e40af; }
+.fac-anulada, .fac-no_aplica { background: #f1f5f9; color: #475569; text-decoration: line-through; }
+.fac-vencida, .prio-critica, .fac-prio-critica { background: #fee2e2; color: #991b1b; }
+.fac-proxima, .prio-alta, .fac-prio-alta { background: #ffedd5; color: #9a3412; }
+.fac-por_vencer, .prio-media, .fac-prio-media { background: #fef9c3; color: #854d0e; }
+.prio-baja, .fac-prio-baja { background: #dcfce7; color: #166534; }
+.facturas-dialog.wide { width: min(760px, 94vw); }
+.facturas-dialog label { display: block; margin: 10px 0; font-size: 13px; }
+.facturas-dialog label > input, .facturas-dialog label > select, .facturas-dialog label > textarea { width: 100%; margin-top: 4px; }
+.tabs-tms { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin: 12px 0 16px; flex-wrap: wrap; }
+.tabs-tms button { background: none; border: none; padding: 10px 14px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tabs-tms button[aria-selected="true"] { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+.perm-matrix { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+.perm-matrix th, .perm-matrix td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; }
+.perm-matrix th:first-child, .perm-matrix td:first-child { text-align: left; }
+.perm-matrix td small { display: block; color: #64748b; font-weight: 400; }
+.perm-matrix input[type=checkbox] { width: 16px; height: 16px; }
+.analisis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.analisis-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
+.analisis-card h3 { font-size: 15px; margin: 0 0 12px; }
+.analisis-card ul { margin: 0; padding-left: 18px; }
+.analisis-card li { margin: 8px 0; }
+.analisis-card.critico { border-left: 4px solid #dc2626; }
+.analisis-card.negativo { border-left: 4px solid #ea580c; }
+.analisis-card.positivo { border-left: 4px solid #16a34a; }
+.tend-mejora { color: #15803d; font-weight: 600; }
+.tend-empeora { color: #b91c1c; font-weight: 600; }
+.muted { color: #64748b; font-size: 12px; }
+@media print {
+  .tms-sidebar, .tms-topbar, .tms-chat-fab, .tms-chat-panel, .no-print { display: none !important; }
+  .tms-main-wrapper { margin-left: 0 !important; }
+  .analisis-card { break-inside: avoid; }
+}

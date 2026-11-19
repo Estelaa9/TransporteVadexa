@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/../config/gestion.php';
 require_auth();
+if ($_SERVER['REQUEST_METHOD'] !== 'GET' && $_SERVER['REQUEST_METHOD'] !== 'POST') require_method('GET', 'POST');
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = gestion_query($conn, 'SELECT * FROM servicio_operacion WHERE servicio_id = ?', 'i', [(int)($_GET['id'] ?? 0)]);
@@ -32,6 +33,7 @@ try {
     gestion_query($conn, 'INSERT INTO servicio_operacion (servicio_id, proveedor_id, provincia, distrito, referencia, contacto, telefono, almacen, temporada, frecuencia, observaciones, actualizado_por)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE proveedor_id=VALUES(proveedor_id), provincia=VALUES(provincia), distrito=VALUES(distrito), referencia=VALUES(referencia), contacto=VALUES(contacto), telefono=VALUES(telefono), almacen=VALUES(almacen), temporada=VALUES(temporada), frecuencia=VALUES(frecuencia), observaciones=VALUES(observaciones), actualizado_por=VALUES(actualizado_por)',
         'ii' . str_repeat('s', 10), array_merge([$id, $proveedor], $values, [$_SESSION['usuario']]));
+    auditar("editar", "servicio_operacion", $id, null, array_combine(array_keys($fields), $values) + ["proveedor_id" => $proveedor]);
     mysqli_commit($conn);
     json_response(['success' => true]);
 } catch (InvalidArgumentException $e) {

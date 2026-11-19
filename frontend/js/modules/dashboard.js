@@ -1,5 +1,5 @@
 // frontend/js/modules/dashboard.js - Vista del Dashboard con métricas y KPIs
-import { api, showToast, fmt } from '../api.js';
+import { api, showToast, fmt, esc } from '../api.js';
 
 export async function renderDashboard(container) {
   const now = new Date();
@@ -34,7 +34,7 @@ export async function renderDashboard(container) {
       <div class="kpi-card blue">
         <div class="kpi-icon-wrap"><i class="bi bi-truck"></i></div>
         <div>
-          <div class="kpi-title">Servicios del Mes</div>
+          <div class="kpi-title">Servicios del mes (no anulados)</div>
           <div class="kpi-value" id="kpi-servicios">-</div>
         </div>
       </div>
@@ -42,7 +42,7 @@ export async function renderDashboard(container) {
       <div class="kpi-card green">
         <div class="kpi-icon-wrap"><i class="bi bi-cash-stack"></i></div>
         <div>
-          <div class="kpi-title">Facturación Total</div>
+          <div class="kpi-title">Ingresos sin IGV (servicios finalizados)</div>
           <div class="kpi-value" id="kpi-facturacion">-</div>
         </div>
       </div>
@@ -50,7 +50,7 @@ export async function renderDashboard(container) {
       <div class="kpi-card amber">
         <div class="kpi-icon-wrap"><i class="bi bi-receipt"></i></div>
         <div>
-          <div class="kpi-title">IGV Generado</div>
+          <div class="kpi-title">Facturado con IGV · IGV</div>
           <div class="kpi-value" id="kpi-igv">-</div>
         </div>
       </div>
@@ -58,7 +58,7 @@ export async function renderDashboard(container) {
       <div class="kpi-card purple">
         <div class="kpi-icon-wrap"><i class="bi bi-graph-up-arrow"></i></div>
         <div>
-          <div class="kpi-title">Utilidad Neta</div>
+          <div class="kpi-title">Resultado operativo (sin IGV)</div>
           <div class="kpi-value" id="kpi-utilidad">-</div>
         </div>
       </div>
@@ -69,7 +69,7 @@ export async function renderDashboard(container) {
       <div class="kpi-card rose">
         <div class="kpi-icon-wrap"><i class="bi bi-fuel-pump"></i></div>
         <div style="flex: 1;">
-          <div class="kpi-title">Gastos Operativos (Flota)</div>
+          <div class="kpi-title">Costos y gastos (terceros + operativos + administrativos + adicionales)</div>
           <div class="kpi-value" id="kpi-gastos-op">-</div>
         </div>
       </div>
@@ -77,7 +77,7 @@ export async function renderDashboard(container) {
       <div class="kpi-card amber">
         <div class="kpi-icon-wrap"><i class="bi bi-building"></i></div>
         <div style="flex: 1;">
-          <div class="kpi-title">Gastos Administrativos</div>
+          <div class="kpi-title">Cuentas por cobrar · vencido</div>
           <div class="kpi-value" id="kpi-gastos-admin">-</div>
         </div>
       </div>
@@ -125,20 +125,21 @@ export async function renderDashboard(container) {
       const res = await api.get('dashboard/index.php', { json: 1, mes, anio });
       if (res.success) {
         const d = res.data;
-        document.getElementById('kpi-servicios').textContent = d.servicios_mes || 0;
-        document.getElementById('kpi-facturacion').textContent = fmt.moneda(d.facturacion);
-        document.getElementById('kpi-igv').textContent = fmt.moneda(d.igv);
-        
+        document.getElementById('kpi-servicios').textContent = `${d.servicios_mes || 0} · ${d.servicios_finalizados} finalizados`;
+        document.getElementById('kpi-facturacion').textContent = fmt.moneda(d.ingresos);
+        document.getElementById('kpi-igv').textContent = `${fmt.moneda(d.facturado_total)} · IGV ${fmt.moneda(d.facturado_igv)}`;
+
         const utilEl = document.getElementById('kpi-utilidad');
-        utilEl.textContent = fmt.moneda(d.utilidad);
-        if (d.utilidad < 0) {
+        utilEl.textContent = `${fmt.moneda(d.resultado_operativo)} (${fmt.numero(d.margen_operativo_pct, 1)} %)`;
+        utilEl.title = 'Ingresos sin IGV − costo de terceros − gastos. No es utilidad neta: no descuenta el impuesto a la renta.';
+        if (d.resultado_operativo < 0) {
           utilEl.style.color = '#dc2626';
         } else {
           utilEl.style.color = '#15803d';
         }
 
-        document.getElementById('kpi-gastos-op').textContent = fmt.moneda(d.gastos_operativos);
-        document.getElementById('kpi-gastos-admin').textContent = fmt.moneda(d.gastos_admin);
+        document.getElementById('kpi-gastos-op').textContent = fmt.moneda(d.total_gastos);
+        document.getElementById('kpi-gastos-admin').textContent = `${fmt.moneda(d.saldo_por_cobrar)} · vencido ${fmt.moneda(d.saldo_vencido)}`;
 
         const tbody = document.getElementById('dash-tabla-servicios');
         if (!d.servicios_recientes || d.servicios_recientes.length === 0) {
@@ -148,13 +149,13 @@ export async function renderDashboard(container) {
 
         tbody.innerHTML = d.servicios_recientes.map(s => `
           <tr>
-            <td><strong>#${s.id}</strong></td>
-            <td>${fmt.fecha(s.fecha_servicio)}</td>
-            <td><strong>${s.cliente || '-'}</strong></td>
-            <td><span class="badge-status" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">${s.placa || '-'}</span></td>
-            <td>${s.conductor || '-'}</td>
-            <td>${s.origen || '-'} <i class="bi bi-arrow-right text-muted"></i> ${s.destino || '-'}</td>
-            <td><code style="color:#0369a1;">${s.guia_transportista || '-'}</code></td>
+            <td><strong>#${esc(s.id)}</strong></td>
+            <td>${esc(fmt.fecha(s.fecha_servicio))}</td>
+            <td><strong>${esc(s.cliente || '-')}</strong></td>
+            <td><span class="badge-status" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">${esc(s.placa || s.proveedor || '-')}</span></td>
+            <td>${esc(s.conductor || (s.modalidad === 'tercerizado' ? 'Tercerizado' : '-'))}</td>
+            <td>${esc(s.origen || '-')} <i class="bi bi-arrow-right text-muted"></i> ${esc(s.destino || '-')}</td>
+            <td><code style="color:#0369a1;">${esc(s.guia_transportista || '-')}</code></td>
             <td style="font-weight: 700; color: #1e293b;">${fmt.moneda(s.precio_cliente)}</td>
             <td>${fmt.badgeEstado(s.estado_servicio)}</td>
           </tr>

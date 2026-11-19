@@ -1,3 +1,3 @@
 <?php
-// Compatibilidad con la ruta anterior: misma validación y permisos.
+// Ruta anterior: misma validación y permisos que usuarios/gestionar.php.
 require __DIR__ . '/gestionar.php';

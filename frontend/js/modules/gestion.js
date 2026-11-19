@@ -1,4 +1,5 @@
 import { api, fmt, showToast } from '../api.js';
+import { auth } from './auth.js';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
 export const hoy = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
@@ -66,7 +67,7 @@ export async function renderCierre(container) {
   container.innerHTML=`<div class="page-title-box"><div class="page-title-main">Cierre y gastos adicionales<span class="page-title-sub">Resultado de servicios finalizados y cobros del período</span></div></div>
   <form id="ci-filter" class="gestion-grid">${input('desde','Desde','date',`required value="${hoy()}"`)}${input('hasta','Hasta','date',`required value="${hoy()}"`)}${button('Consultar','ci-load','submit')}${button('Imprimir','ci-print')}</form>
   <p id="ci-error" role="alert"></p><div class="facturas-summary" id="ci-summary"></div><div id="ci-chart" class="gestion-chart" aria-label="Comparación de ingresos y gastos"></div>
-  <p>Resultado operativo = precio de servicios finalizados − proveedores − gastos operativos − administrativos − adicionales. Los cobros se muestran por fecha de pago y no se suman de nuevo al resultado. No registre el mismo gasto en dos categorías.</p>
+  <p>Resultado operativo = base imponible (sin IGV) de servicios finalizados − costo de terceros − gastos operativos − administrativos − adicionales. No es utilidad neta (no descuenta impuesto a la renta). Los cobros se muestran por fecha de pago y no se suman de nuevo al resultado. No registre el mismo gasto en dos categorías.</p>
   <details><summary>Registrar gasto adicional</summary><form id="ci-form" class="gestion-grid">${input('fecha','Fecha','date',`required value="${hoy()}"`)}${input('concepto','Concepto','text','required maxlength="255"')}${input('monto','Importe S/','number','required min="0.01" max="99999999.99" step="0.01"')}${input('servicio_id','Servicio (opcional)','number','min="1"')}${button('Guardar gasto','ci-save','submit')}</form></details>
   <h3>Gastos adicionales del período</h3><div class="tms-table-container"><table class="tms-table"><thead><tr><th>Fecha</th><th>Concepto</th><th>Servicio</th><th>Importe</th><th>Registrado por</th></tr></thead><tbody id="ci-body"></tbody></table></div>`;
   const find=s=>container.querySelector(s), filter=find('#ci-filter'), form=find('#ci-form');
@@ -86,155 +87,170 @@ export async function renderCierre(container) {
   await load();
 }
 
+// Usuarios y roles (Mejora 1): usuario → rol → permisos (módulo × acción). El servidor valida cada operación.
 export async function renderUsuarios(container) {
-  let rows = [], moduleCatalog = [], csrf = '', selectedUserId = '';
+  let users = [], roles = [], clientes = [], catalogo = {}, acciones = {}, rolSel = null;
+  const puedeCrear = auth.can('usuarios', 'crear');
+  const puedeEditar = auth.can('usuarios', 'editar');
   container.innerHTML = `
-    <div class="page-title-box"><div class="page-title-main">Administración de usuarios y permisos
-      <span class="page-title-sub">Cuentas activas, roles y acceso individual por módulo</span></div></div>
-    <section class="users-admin-card">
-      <h3 id="us-form-title">Crear usuario</h3>
-      <form id="us-form" class="gestion-grid">
-        <input type="hidden" name="id">
-        ${input('nombre','Nombre','text','required maxlength="100"')}
-        ${input('usuario','Usuario','text','required pattern="[a-zA-Z0-9_.-]{3,50}" autocomplete="off"')}
-        ${input('password','Contraseña','password','required minlength="10" autocomplete="new-password"')}
-        <label>Rol<select name="rol" class="form-control-tms"><option value="usuario">Usuario</option><option value="admin">Administrador</option></select></label>
-        <label>Estado de cuenta<select name="estado" class="form-control-tms"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
-        <div class="users-admin-actions">${button('Guardar usuario','us-save','submit')}${button('Nuevo / limpiar','us-clear')}</div>
+    <div class="page-title-box"><div class="page-title-main">Usuarios y roles
+      <span class="page-title-sub">Cada usuario tiene un rol; cada rol define qué puede hacer en cada módulo</span></div></div>
+    <div class="tabs-tms" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="us">Cuentas</button>
+      <button role="tab" aria-selected="false" data-tab="ro">Roles y permisos</button>
+    </div>
+    <section id="tab-us">
+      ${puedeCrear || puedeEditar ? `<section class="users-admin-card">
+        <h3 id="us-form-title">Crear usuario</h3>
+        <form id="us-form" class="gestion-grid">
+          <input type="hidden" name="id">
+          ${input('nombre', 'Nombre', 'text', 'required maxlength="100"')}
+          ${input('usuario', 'Usuario', 'text', 'required pattern="[a-zA-Z0-9_.\\-]{3,50}" autocomplete="off"')}
+          ${input('password', 'Contraseña inicial', 'password', 'required minlength="10" autocomplete="new-password"')}
+          <label>Rol<select name="rol" class="form-control-tms" required></select></label>
+          <label id="us-cliente-wrap" hidden>Cliente vinculado<select name="cliente_id" class="form-control-tms"><option value="">Seleccione</option></select></label>
+          <label>Estado<select name="estado" class="form-control-tms"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+          <label><input type="checkbox" name="desbloquear" value="1"> Desbloquear cuenta</label>
+          <div class="users-admin-actions">${button('Guardar usuario', 'us-save', 'submit')}${button('Nuevo / limpiar', 'us-clear')}</div>
+        </form>
+        <p class="muted">Las cuentas nuevas deben cambiar su contraseña en el primer ingreso. Mínimo 10 caracteres con letras y números.</p>
+        <p id="us-error" role="alert" class="text-danger"></p>
+      </section>` : ''}
+      <section class="users-admin-card">
+        <div class="users-admin-heading"><div><h3>Cuentas registradas</h3><p>Desactivar una cuenta revoca su acceso en la siguiente petición.</p></div></div>
+        <div class="tms-table-container"><table class="tms-table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Cliente</th><th>Estado</th><th>Último acceso</th><th></th></tr></thead><tbody id="us-body"></tbody></table></div>
+      </section>
+    </section>
+    <section id="tab-ro" hidden>
+      <div class="users-admin-card">
+        <div class="users-admin-heading"><div><h3>Roles</h3><p>Seleccione un rol para ver o editar su matriz de permisos.</p></div>
+          ${puedeEditar ? '<button class="btn-tms btn-tms-primary" id="ro-new" type="button">Nuevo rol</button>' : ''}</div>
+        <div class="tms-table-container"><table class="tms-table"><thead><tr><th>Rol</th><th>Descripción</th><th>Usuarios</th><th>Estado</th><th></th></tr></thead><tbody id="ro-body"></tbody></table></div>
+      </div>
+      <form id="ro-form" class="users-admin-card" hidden>
+        <h3 id="ro-title"></h3>
+        <div class="gestion-grid">
+          ${input('nombre', 'Nombre del rol', 'text', 'required maxlength="80"')}
+          ${input('descripcion', 'Descripción', 'text', 'maxlength="255"')}
+          <label><input type="checkbox" name="activo" value="1" checked> Rol activo</label>
+        </div>
+        <p id="ro-nota" class="muted"></p>
+        <div class="tms-table-container"><table class="perm-matrix"><thead id="ro-head"></thead><tbody id="ro-matrix"></tbody></table></div>
+        <p id="ro-error" role="alert" class="text-danger"></p>
+        ${puedeEditar ? '<div class="users-admin-actions" style="margin-top:12px"><button class="btn-tms btn-tms-primary" id="ro-save">Guardar rol y permisos</button></div>' : ''}
       </form>
-      <p id="us-error" role="alert" class="text-danger"></p>
-    </section>
-    <section class="users-admin-card">
-      <div class="users-admin-heading"><div><h3>Cuentas registradas</h3><p>Desactive una cuenta para revocar su acceso inmediatamente.</p></div><button id="us-refresh" class="btn-tms btn-tms-default" type="button">Actualizar</button></div>
-      <div class="tms-table-container"><table class="tms-table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Cuenta</th><th>Acción</th></tr></thead><tbody id="us-body"></tbody></table></div>
-    </section>
-    <section id="us-permissions-panel" class="users-admin-card" hidden>
-      <div class="users-admin-heading"><div><h3>Permisos por módulo</h3><p id="us-selected-label"></p></div><button id="us-permissions-save" class="btn-tms btn-tms-primary" type="button">Guardar permisos</button></div>
-      <div id="us-modules-grid" class="users-module-grid"></div>
-      <p id="us-permissions-message" role="status"></p>
     </section>`;
-  const find = selector => container.querySelector(selector);
-  const form = find('#us-form');
-  const permissionsPanel = find('#us-permissions-panel');
 
-  function setSelectedUser(user) {
-    selectedUserId = String(user.id);
-    find('#us-selected-label').textContent = `${user.nombre} · ${user.usuario} · ${user.estado}`;
-    permissionsPanel.hidden = false;
-    const activeModules = new Set((user.modulos || []).filter(module => module.activo).map(module => module.modulo));
-    find('#us-modules-grid').innerHTML = moduleCatalog.map(module => `
-      <label class="users-module-card">
-        <span class="users-module-copy"><strong>${esc(module.nombre)}</strong><small>${esc(module.descripcion)}</small></span>
-        <span class="users-switch"><input type="checkbox" name="module" value="${esc(module.modulo)}" ${activeModules.has(module.modulo) ? 'checked' : ''}><span aria-hidden="true"></span></span>
-      </label>`).join('');
-    find('#us-permissions-message').textContent = '';
+  const $ = s => container.querySelector(s);
+  const form = $('#us-form');
+  container.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
+    container.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    $('#tab-us').hidden = b.dataset.tab !== 'us';
+    $('#tab-ro').hidden = b.dataset.tab !== 'ro';
+  });
+  const rolNombre = codigo => roles.find(r => r.codigo === codigo)?.nombre || codigo;
+
+  function renderUsers() {
+    $('#us-body').innerHTML = users.map(u => `<tr>
+      <td>${esc(u.nombre)}</td><td>${esc(u.usuario)}</td><td>${esc(rolNombre(u.rol))}</td><td>${esc(u.cliente || '')}</td>
+      <td>${esc(u.estado)}${Number(u.bloqueado) ? ' · <strong>bloqueada</strong>' : ''}${Number(u.debe_cambiar_password) ? '<br><small>debe cambiar contraseña</small>' : ''}</td>
+      <td>${esc(u.ultimo_acceso || '—')}</td>
+      <td>${puedeEditar ? `<button class="btn-tms btn-tms-default" type="button" data-edit-user="${esc(u.id)}">Editar</button>` : ''}</td></tr>`).join('')
+      || '<tr><td colspan="7">No hay cuentas registradas.</td></tr>';
+  }
+  function renderRoles() {
+    $('#ro-body').innerHTML = roles.map(r => `<tr><td><strong>${esc(r.nombre)}</strong><br><small>${esc(r.codigo)}</small></td><td>${esc(r.descripcion)}</td>
+      <td>${esc(r.usuarios ?? '')}</td><td>${Number(r.activo) ? 'Activo' : 'Inactivo'}</td>
+      <td><button class="btn-tms btn-tms-default" type="button" data-rol="${esc(r.id)}">${puedeEditar ? 'Ver / editar' : 'Ver'} permisos</button></td></tr>`).join('');
+  }
+  function abrirRol(r) {
+    rolSel = r;
+    const f = $('#ro-form');
+    f.hidden = false;
+    f.reset();
+    f.elements.nombre.value = r?.nombre || '';
+    f.elements.descripcion.value = r?.descripcion || '';
+    f.elements.activo.checked = r ? Number(r.activo) === 1 : true;
+    $('#ro-error').textContent = '';
+    const esAdmin = r?.codigo === 'administrador';
+    const esCliente = r?.codigo === 'cliente';
+    $('#ro-title').textContent = r ? `Rol: ${r.nombre}` : 'Nuevo rol';
+    $('#ro-nota').textContent = esAdmin ? 'El administrador siempre tiene todos los permisos; no se edita.' :
+      esCliente ? 'El rol Cliente solo puede acceder al portal del cliente, con sus propios datos.' : 'Marque las acciones permitidas en cada módulo. «Ver» se añade automáticamente si marca otra acción.';
+    const accs = Object.keys(acciones);
+    $('#ro-head').innerHTML = `<tr><th>Módulo</th>${accs.map(a => `<th>${esc(acciones[a])}</th>`).join('')}</tr>`;
+    $('#ro-matrix').innerHTML = Object.entries(catalogo).filter(([m]) => esCliente ? m === 'portal' : m !== 'portal').map(([m, def]) => `<tr>
+      <td>${esc(def.nombre)}<small>${esc(def.descripcion)}</small></td>
+      ${accs.map(a => def.acciones.includes(a) ? `<td><input type="checkbox" data-mod="${esc(m)}" data-acc="${esc(a)}" aria-label="${esc(def.nombre)}: ${esc(acciones[a])}"
+        ${esAdmin || (r?.permisos?.[m] || []).includes(a) ? 'checked' : ''} ${esAdmin || !puedeEditar ? 'disabled' : ''}></td>` : '<td>—</td>').join('')}</tr>`).join('');
+    if ($('#ro-save')) $('#ro-save').disabled = esAdmin;
+    f.scrollIntoView({ behavior: 'smooth' });
   }
 
   async function load() {
-    find('#us-refresh').disabled = true;
-    try {
-      const response = await api.get('usuarios/index.php');
-      rows = response.data || [];
-      moduleCatalog = response.module_catalog || [];
-      csrf = response.csrf_token;
-      find('#us-body').innerHTML = rows.map(user => `
-        <tr>
-          <td>${esc(user.nombre)}</td><td>${esc(user.usuario)}</td><td>${esc(user.rol)}</td>
-          <td><label class="users-switch" aria-label="Cuenta ${user.estado === 'activo' ? 'activa' : 'inactiva'}"><input type="checkbox" data-account-toggle="${esc(user.id)}" ${user.estado === 'activo' ? 'checked' : ''}><span aria-hidden="true"></span></label><span>${esc(user.estado)}</span></td>
-          <td><button class="btn-tms btn-tms-default" type="button" data-edit-user="${esc(user.id)}">Editar y permisos</button></td>
-        </tr>`).join('') || '<tr><td colspan="5">No hay cuentas registradas.</td></tr>';
-      if (selectedUserId) {
-        const selected = rows.find(user => String(user.id) === selectedUserId);
-        if (selected) setSelectedUser(selected);
-        else { selectedUserId = ''; permissionsPanel.hidden = true; }
-      }
-    } finally {
-      find('#us-refresh').disabled = false;
+    const [u, r] = await Promise.all([api.get('usuarios/index.php'), api.get('usuarios/roles.php')]);
+    users = u.data; clientes = u.clientes; roles = r.roles; catalogo = r.modulos; acciones = r.acciones;
+    if (form) {
+      form.elements.rol.innerHTML = roles.filter(x => Number(x.activo)).map(x => `<option value="${esc(x.codigo)}">${esc(x.nombre)}</option>`).join('');
+      form.elements.cliente_id.innerHTML = '<option value="">Seleccione</option>' + clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} · ${esc(c.documento)}</option>`).join('');
     }
+    renderUsers();
+    renderRoles();
+    if (rolSel?.id) abrirRol(roles.find(x => String(x.id) === String(rolSel.id)) || null);
   }
 
   function resetForm() {
+    if (!form) return;
     form.reset();
     form.elements.id.value = '';
     form.elements.password.required = true;
-    form.elements.password.value = '';
-    find('#us-form-title').textContent = 'Crear usuario';
-    find('#us-error').textContent = '';
+    form.elements.password.placeholder = '';
+    $('#us-cliente-wrap').hidden = true;
+    $('#us-form-title').textContent = 'Crear usuario';
+    $('#us-error').textContent = '';
   }
-
-  find('#us-clear').onclick = resetForm;
-  find('#us-refresh').onclick = () => load().catch(error => showToast(error.message, 'error'));
-  find('#us-body').onclick = event => {
-    const button = event.target.closest('[data-edit-user]');
-    if (!button) return;
-    const user = rows.find(entry => String(entry.id) === button.dataset.editUser);
-    if (!user) return;
-    form.reset();
-    for (const [key, value] of Object.entries(user)) {
-      if (form.elements[key]) form.elements[key].value = key === 'rol' && value === 'administrador' ? 'admin' : value;
-    }
-    form.elements.password.value = '';
+  if (form) {
+    form.elements.rol.onchange = () => { $('#us-cliente-wrap').hidden = form.elements.rol.value !== 'cliente'; };
+    $('#us-clear').onclick = resetForm;
+    form.onsubmit = async e => {
+      e.preventDefault();
+      $('#us-save').disabled = true;
+      $('#us-error').textContent = '';
+      try {
+        await api.post('usuarios/gestionar.php', Object.fromEntries(new FormData(form)));
+        showToast('Usuario guardado.');
+        resetForm();
+        await load();
+      } catch (err) { $('#us-error').textContent = err.message; } finally { $('#us-save').disabled = false; }
+    };
+  }
+  $('#us-body').onclick = e => {
+    const b = e.target.closest('[data-edit-user]');
+    if (!b || !form) return;
+    const u = users.find(x => String(x.id) === b.dataset.editUser);
+    resetForm();
+    ['id', 'nombre', 'usuario', 'rol', 'estado'].forEach(k => { form.elements[k].value = u[k] ?? ''; });
+    form.elements.cliente_id.value = u.cliente_id || '';
+    $('#us-cliente-wrap').hidden = u.rol !== 'cliente';
     form.elements.password.required = false;
-    find('#us-form-title').textContent = `Editar usuario: ${user.nombre}`;
-    find('#us-error').textContent = '';
-    setSelectedUser(user);
+    form.elements.password.placeholder = 'Dejar vacío para no cambiarla';
+    $('#us-form-title').textContent = `Editar usuario: ${u.nombre}`;
+    form.scrollIntoView({ behavior: 'smooth' });
   };
-  find('#us-body').onchange = async event => {
-    const toggle = event.target.closest('[data-account-toggle]');
-    if (!toggle) return;
-    const user = rows.find(entry => String(entry.id) === toggle.dataset.accountToggle);
-    if (!user) return;
-    toggle.disabled = true;
+  $('#ro-body').onclick = e => { const b = e.target.closest('[data-rol]'); if (b) abrirRol(roles.find(r => String(r.id) === b.dataset.rol)); };
+  $('#ro-new')?.addEventListener('click', () => abrirRol(null));
+  $('#ro-form').onsubmit = async e => {
+    e.preventDefault();
+    const f = e.currentTarget;
+    const permisos = {};
+    f.querySelectorAll('[data-mod]:checked').forEach(c => { (permisos[c.dataset.mod] = permisos[c.dataset.mod] || []).push(c.dataset.acc); });
+    for (const [m, accs] of Object.entries(permisos)) if (!accs.includes('ver') && catalogo[m].acciones.includes('ver')) accs.push('ver');
     try {
-      await api.post('usuarios/gestionar.php', {
-        id: user.id, nombre: user.nombre, usuario: user.usuario,
-        rol: ['admin', 'administrador'].includes(user.rol) ? 'admin' : 'usuario',
-        estado: toggle.checked ? 'activo' : 'inactivo', password: '', csrf_token: csrf
-      });
-      selectedUserId = String(user.id);
-      showToast(`Cuenta ${toggle.checked ? 'activada' : 'desactivada'}.`);
+      const res = await api.post('usuarios/roles.php', { id: rolSel?.id || '', nombre: f.elements.nombre.value, descripcion: f.elements.descripcion.value, activo: f.elements.activo.checked ? 1 : 0, permisos });
+      showToast('Rol guardado. Los cambios se aplican en la siguiente petición de cada usuario.');
+      rolSel = { id: res.id };
       await load();
-    } catch (error) {
-      toggle.checked = !toggle.checked;
-      showToast(error.message, 'error');
-    } finally {
-      toggle.disabled = false;
-    }
-  };
-  form.onsubmit = async event => {
-    event.preventDefault();
-    find('#us-save').disabled = true;
-    find('#us-error').textContent = '';
-    try {
-      const payload = Object.fromEntries(new FormData(form));
-      await api.post('usuarios/gestionar.php', {...payload, csrf_token: csrf});
-      await load();
-      const saved = rows.find(user => String(user.id) === String(payload.id)) ||
-        rows.find(user => user.usuario === payload.usuario);
-      resetForm();
-      if (saved) setSelectedUser(saved);
-      showToast('Usuario guardado.');
-    } catch (error) {
-      find('#us-error').textContent = error.message;
-    } finally {
-      find('#us-save').disabled = false;
-    }
-  };
-  find('#us-permissions-save').onclick = async () => {
-    const saveButton = find('#us-permissions-save');
-    saveButton.disabled = true;
-    find('#us-permissions-message').textContent = '';
-    const modules = [...find('#us-modules-grid').querySelectorAll('input[name="module"]:checked')].map(input => input.value);
-    try {
-      await api.post('usuarios/permisos.php', {user_id: selectedUserId, modulos: modules, csrf_token: csrf});
-      await load();
-      find('#us-permissions-message').textContent = 'Permisos guardados. El cambio se aplica en la siguiente petición del usuario.';
-      showToast('Permisos actualizados.');
-    } catch (error) {
-      find('#us-permissions-message').textContent = error.message;
-    } finally {
-      saveButton.disabled = false;
-    }
+    } catch (err) { $('#ro-error').textContent = err.message; }
   };
   await load();
 }
