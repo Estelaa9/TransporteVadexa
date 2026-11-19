@@ -135,11 +135,11 @@ export const fmt = {
   }
 };
 
+/** Fecha LOCAL (no UTC) en formato AAAA-MM-DD. toISOString() daría el día siguiente en Lima después de las 7 p. m. */
+export const isoLocal = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 /** Fecha local de hoy en formato AAAA-MM-DD. */
-export const hoyISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+export const hoyISO = () => isoLocal();
 
 /** Neutraliza fórmulas al exportar a CSV (SEG-30). */
 export const csvCell = value => {

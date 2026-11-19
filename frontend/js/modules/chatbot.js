@@ -19,7 +19,7 @@ export function initChatbot() {
       panel.classList.add('open');
       input.focus();
       if (messagesContainer.children.length === 0) {
-        addBotMessage('Hola. Soy el asistente de consultas de VADEXSA (basado en reglas).\nPrueba con:\n• servicios de hoy\n• estado del servicio #15\n• facturación del mes\n• cuentas por cobrar\n• conductores disponibles');
+        addBotMessage('Hola. Soy el asistente de consultas de VADEXSA (basado en reglas) y estoy conectado a todos los módulos.\nPrueba con:\n• servicios de mañana · servicio #15\n• cliente andina · placa BXK-481 · conductor Pedro\n• F001-000012 · cuentas por cobrar · deudores\n• resultado del mes · diagnóstico del mes\nEscribe «ayuda» para ver todo lo que puedo responder.');
       }
     }
   }

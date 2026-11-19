@@ -24,7 +24,7 @@ function servicio_validar_asignacion(mysqli $conn, int $vehiculoId, int $conduct
     $avisos = [];
     $v = db_one($conn, 'SELECT id, placa, estado, capacidad_kg, soat_vencimiento, revision_vencimiento FROM vehiculos WHERE id = ?', 'i', [$vehiculoId]);
     if (!$v) throw new InvalidArgumentException('Seleccione un vehículo de la flota propia.');
-    if ($v['estado'] !== 'activo') throw new DomainException("El vehículo {$v['placa']} está en estado «{$v['estado']}» y no puede asignarse.");
+    if (strtolower(trim((string)$v['estado'])) !== 'activo') throw new DomainException("El vehículo {$v['placa']} está en estado «{$v['estado']}» y no puede asignarse.");
     foreach (['soat_vencimiento' => 'SOAT', 'revision_vencimiento' => 'revisión técnica'] as $col => $label) {
         if ($v[$col] && $v[$col] < $fecha) throw new DomainException("El $label del vehículo {$v['placa']} vence el {$v[$col]}, antes de la fecha del servicio.");
         if ($v[$col] && $v[$col] <= date('Y-m-d', strtotime("$fecha +30 days"))) $avisos[] = "El $label del vehículo {$v['placa']} vence el {$v[$col]}.";
@@ -35,7 +35,7 @@ function servicio_validar_asignacion(mysqli $conn, int $vehiculoId, int $conduct
 
     $c = db_one($conn, 'SELECT id, nombre, estado, licencia_vencimiento FROM conductores WHERE id = ?', 'i', [$conductorId]);
     if (!$c) throw new InvalidArgumentException('Seleccione un conductor registrado.');
-    if ($c['estado'] !== 'activo') throw new DomainException("El conductor {$c['nombre']} está en estado «{$c['estado']}» y no puede asignarse.");
+    if (strtolower(trim((string)$c['estado'])) !== 'activo') throw new DomainException("El conductor {$c['nombre']} está en estado «{$c['estado']}» y no puede asignarse.");
     if ($c['licencia_vencimiento'] && $c['licencia_vencimiento'] < $fecha) {
         throw new DomainException("La licencia de {$c['nombre']} vence el {$c['licencia_vencimiento']}, antes de la fecha del servicio.");
     }

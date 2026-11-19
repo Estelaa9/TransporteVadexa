@@ -1,5 +1,5 @@
 // frontend/js/modules/auditoria.js - Consulta del registro de auditoría (SEG-24): quién hizo qué, cuándo y desde dónde.
-import { api, showToast, esc, hoyISO, downloadCsv } from '../api.js';
+import { api, showToast, esc, hoyISO, isoLocal, downloadCsv } from '../api.js';
 import { auth } from './auth.js';
 
 export async function renderAuditoria(container) {
@@ -9,7 +9,7 @@ export async function renderAuditoria(container) {
     <div class="page-title-box"><div class="page-title-main"><i class="bi bi-shield-check text-primary"></i> Auditoría
       <span class="page-title-sub">Registro de creación, modificación, anulación e inicios de sesión</span></div></div>
     <form id="au-form" class="gestion-grid">
-      <label>Desde<input type="date" name="desde" class="form-control-tms" value="${d.toISOString().slice(0, 10)}"></label>
+      <label>Desde<input type="date" name="desde" class="form-control-tms" value="${isoLocal(d)}"></label>
       <label>Hasta<input type="date" name="hasta" class="form-control-tms" value="${hoyISO()}"></label>
       <label>Tabla<select name="tabla" class="form-control-tms"><option value="">Todas</option></select></label>
       <label>Acción<select name="accion" class="form-control-tms"><option value="">Todas</option>

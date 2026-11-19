@@ -1,6 +1,6 @@
 // frontend/js/modules/cuentas.js - Cuentas por cobrar (Mejora 2): pagos parciales y totales, saldos, vencimientos,
 // antigüedad de la deuda, alertas de cobranza e indicadores (periodo promedio de cobro, % vencido, monto vencido).
-import { api, fmt, showToast, esc, hoyISO, downloadCsv } from '../api.js';
+import { api, fmt, showToast, esc, hoyISO, isoLocal, downloadCsv } from '../api.js';
 import { auth } from './auth.js';
 
 const SITUACION = { por_vencer: 'Por vencer', proxima: 'Próxima a vencer', vencida: 'Vencida' };
@@ -13,7 +13,7 @@ export async function renderCuentas(container) {
   const puedePagar = auth.can('cuentas', 'crear');
   const puedeAnular = auth.can('cuentas', 'anular');
   const puedeExportar = auth.can('cuentas', 'exportar');
-  const hace90 = (() => { const d = new Date(); d.setDate(d.getDate() - 89); return d.toISOString().slice(0, 10); })();
+  const hace90 = (() => { const d = new Date(); d.setDate(d.getDate() - 89); return isoLocal(d); })();
 
   container.innerHTML = `
     <div class="page-title-box"><div class="page-title-main"><i class="bi bi-wallet2 text-primary"></i> Cuentas por cobrar
