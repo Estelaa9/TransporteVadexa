@@ -1,13 +1,13 @@
 // frontend/js/modules/reportes.js - Generación e Impresión de Reportes
-import { api, showToast, fmt, exportTableToExcel, esc } from '../api.js';
+import { api, showToast, fmt, exportTableToExcel, esc, isoLocal } from '../api.js';
 
 export async function renderReportes(container) {
   let reportType = 'servicios';
   let reportData = [];
 
   const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  const firstDay = isoLocal(new Date(now.getFullYear(), now.getMonth(), 1));
+  const lastDay = isoLocal(new Date(now.getFullYear(), now.getMonth() + 1, 0));
 
   container.innerHTML = `
     <div class="page-title-box">

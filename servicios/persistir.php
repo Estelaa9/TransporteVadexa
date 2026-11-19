@@ -62,7 +62,7 @@ try {
         $proveedorId = (int)($data['proveedor_id'] ?? 0);
         $prov = db_one($conn, 'SELECT id, estado FROM proveedores WHERE id = ?', 'i', [$proveedorId]);
         if (!$prov) throw new InvalidArgumentException('Seleccione el proveedor que realizará el servicio tercerizado.');
-        if ($prov['estado'] !== 'activo') throw new InvalidArgumentException('El proveedor seleccionado está inactivo.');
+        if (strtolower(trim((string)$prov['estado'])) !== 'activo') throw new InvalidArgumentException('El proveedor seleccionado está inactivo.');
         $values += ['vehiculo_id' => null, 'conductor_id' => null, 'proveedor_id' => $proveedorId, 'costo_proveedor' => validar_monto($data['costo_proveedor'] ?? 0)];
     } else {
         $vehiculoId = (int)($data['vehiculo_id'] ?? 0);

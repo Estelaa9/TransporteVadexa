@@ -16,6 +16,7 @@ import { renderOperacion, renderCierre, renderUsuarios } from './modules/gestion
 import { renderAnalisis } from './modules/analisis.js';
 import { renderAuditoria } from './modules/auditoria.js';
 import { initChatbot } from './modules/chatbot.js';
+import { iniciarPaginacion } from './paginacion.js';
 
 const routes = {
   '#dashboard': renderDashboard,
@@ -49,6 +50,7 @@ export async function initRouter() {
   if (!container) throw new Error('No se encontró el contenedor principal de módulos.');
   let navigationId = 0;
   initChatbot();
+  iniciarPaginacion();
 
   const toggleBtn = document.getElementById('sidebar-toggle-btn');
   const sidebar = document.querySelector('.tms-sidebar');

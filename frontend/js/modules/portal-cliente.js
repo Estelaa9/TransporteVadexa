@@ -2,6 +2,7 @@
 // El servidor filtra todo por el cliente vinculado a la sesión; este módulo solo muestra lo que recibe.
 // El seguimiento es por estado del servicio (UX-02): no hay rastreo GPS.
 import { api, showToast, fmt, esc, downloadCsv, hoyISO } from '../api.js';
+import { iniciarPaginacion } from '../paginacion.js';
 
 const ESTADOS = [
   ['programado', 'Programado', 'bi-calendar-check'],
@@ -114,5 +115,6 @@ export async function iniciarPortal() {
     showToast(err.message, 'error');
     return;
   }
+  iniciarPaginacion();
   await renderPortal(container);
 }

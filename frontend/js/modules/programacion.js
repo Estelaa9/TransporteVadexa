@@ -1,9 +1,10 @@
 // frontend/js/modules/programacion.js - Programación y Despacho Diario
-import { api, showToast, fmt, esc } from '../api.js';
+import { api, showToast, fmt, esc, hoyISO } from '../api.js';
 import { auth } from './auth.js';
 
 export async function renderProgramacion(container) {
-  let selectedDate = new Date().toISOString().split('T')[0];
+  let selectedDate = hoyISO();
+  let conductoresDia = [];
 
   container.innerHTML = `
     <div class="page-title-box">
@@ -78,15 +79,28 @@ export async function renderProgramacion(container) {
       </table>
     </div>
 
-    <!-- Conductores Disponibles para la fecha -->
-    <div style="margin-top: 24px; background: #ffffff; padding: 16px 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-light);">
-      <h6 style="font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-        <i class="bi bi-person-check-fill text-success"></i> Conductores Disponibles para esta fecha
-      </h6>
-      <div id="prog-conductores-disponibles" style="display: flex; flex-wrap: wrap; gap: 8px;">
-        <span style="color: #64748b; font-size: 12px;">Consultando disponibilidad...</span>
+    <!-- Disponibilidad de conductores para la fecha -->
+    <section class="disp-panel" aria-labelledby="disp-titulo">
+      <div class="disp-head">
+        <h6 id="disp-titulo"><i class="bi bi-person-check-fill text-success"></i> Disponibilidad de conductores <span id="disp-fecha" class="muted"></span></h6>
+        <div class="disp-filtros">
+          <select id="disp-filtro" class="form-control-tms" aria-label="Filtrar conductores">
+            <option value="libre">Libres todo el día</option>
+            <option value="con_viajes">Con viajes asignados</option>
+            <option value="no_habilitado">No habilitados</option>
+            <option value="">Todos</option>
+          </select>
+          <input id="disp-buscar" type="search" class="form-control-tms" placeholder="Buscar conductor o licencia" aria-label="Buscar conductor">
+        </div>
       </div>
-    </div>
+      <div class="disp-resumen" id="disp-resumen"></div>
+      <div class="tms-table-container">
+        <table class="tms-table" id="tabla-disponibles">
+          <thead><tr><th>Conductor</th><th>Licencia</th><th>Vence</th><th>Teléfono</th><th>Situación del día</th></tr></thead>
+          <tbody id="disp-body"><tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8;">Consultando disponibilidad...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
   `;
 
   const dateInput = document.getElementById('prog-fecha-filtro');
@@ -188,26 +202,54 @@ export async function renderProgramacion(container) {
         });
       }
 
-      const contDisponibles = document.getElementById('prog-conductores-disponibles');
-      const disponibles = resDisponibles.data || [];
-      if (disponibles.length === 0) {
-        contDisponibles.innerHTML = `<span style="color: #ef4444; font-size: 12px;"><i class="bi bi-exclamation-circle"></i> No hay conductores libres registrados para esta fecha.</span>`;
-      } else {
-        contDisponibles.innerHTML = disponibles.map(c => `
-          <span style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="bi bi-person-check"></i> ${esc(c.nombre)} (${esc(c.telefono || 'Sin tel.')})
-          </span>
-        `).join('');
-      }
+      conductoresDia = resDisponibles.todos || [];
+      const r = resDisponibles.resumen || {};
+      document.getElementById('disp-fecha').textContent = '· ' + fmt.fecha(selectedDate);
+      document.getElementById('disp-resumen').innerHTML = [
+        ['libre', 'Libres todo el día', r.libres, 'bi-check-circle-fill'],
+        ['con_viajes', 'Con viajes asignados', r.con_viajes, 'bi-truck'],
+        ['no_habilitado', 'No habilitados', r.no_habilitados, 'bi-slash-circle'],
+      ].map(([k, l, n, i]) => `<button type="button" class="disp-kpi disp-${k}" data-filtro="${k}"><i class="bi ${i}"></i><strong>${esc(n ?? 0)}</strong><span>${l}</span></button>`).join('');
+      renderDisponibles();
 
     } catch (err) {
       showToast(err.message || 'Error al cargar programación', 'error');
     }
   }
 
+  // Tabla de disponibilidad: filtro por situación y búsqueda por nombre o licencia.
+  function renderDisponibles() {
+    const filtro = document.getElementById('disp-filtro').value;
+    const q = document.getElementById('disp-buscar').value.trim().toLowerCase();
+    const filas = conductoresDia.filter(c => (!filtro || c.situacion === filtro) &&
+      (!q || `${c.nombre} ${c.licencia} ${c.categoria_licencia || ''}`.toLowerCase().includes(q)));
+    document.querySelectorAll('#disp-resumen .disp-kpi').forEach(b => b.classList.toggle('activo', b.dataset.filtro === filtro));
+    const situacion = c => {
+      if (c.situacion === 'libre') return '<span class="facturas-status fac-pagada">Libre todo el día</span>';
+      if (c.situacion === 'no_habilitado') return `<span class="facturas-status fac-vencida">${esc(c.motivo)}</span>`;
+      return `<span class="facturas-status fac-parcial">Con ${c.viajes.length} viaje(s)</span><div class="disp-viajes">${c.viajes.map(v =>
+        `<span>#${esc(v.id)} ${esc(v.inicio)}–${esc(v.fin)} · ${esc(v.cliente || '')}</span>`).join('')}</div>`;
+    };
+    document.getElementById('disp-body').innerHTML = filas.map(c => `<tr>
+      <td><strong>${esc(c.nombre)}</strong></td>
+      <td><code>${esc(c.licencia || '-')}</code>${c.categoria_licencia ? ` <small class="muted">${esc(c.categoria_licencia)}</small>` : ''}</td>
+      <td>${c.licencia_vencimiento ? esc(fmt.fecha(c.licencia_vencimiento)) : '<small class="muted">Sin dato</small>'}${c.licencia_por_vencer ? '<br><span class="facturas-status fac-proxima">Vence pronto</span>' : ''}</td>
+      <td>${c.telefono ? `<a href="tel:${esc(c.telefono)}">${esc(c.telefono)}</a>` : '-'}</td>
+      <td>${situacion(c)}</td></tr>`).join('')
+      || `<tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b;">No hay conductores en esta categoría para la fecha.</td></tr>`;
+  }
+  document.getElementById('disp-filtro').addEventListener('change', renderDisponibles);
+  document.getElementById('disp-buscar').addEventListener('input', renderDisponibles);
+  document.getElementById('disp-resumen').addEventListener('click', e => {
+    const b = e.target.closest('[data-filtro]');
+    if (!b) return;
+    document.getElementById('disp-filtro').value = b.dataset.filtro;
+    renderDisponibles();
+  });
+
   dateInput.addEventListener('change', loadProgramacion);
   document.getElementById('btn-prog-hoy').addEventListener('click', () => {
-    dateInput.value = new Date().toISOString().split('T')[0];
+    dateInput.value = hoyISO();
     loadProgramacion();
   });
   document.getElementById('btn-prog-refresh').addEventListener('click', () => {

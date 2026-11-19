@@ -1,5 +1,5 @@
 // frontend/js/modules/gastos.js - Control de Gastos Operativos y Administrativos
-import { api, showToast, fmt, exportTableToExcel, esc } from '../api.js';
+import { api, showToast, fmt, exportTableToExcel, esc, hoyISO } from '../api.js';
 
 export async function renderGastos(container, tipoInicial = 'operativos') {
   let currentTab = tipoInicial; // 'operativos' o 'administrativos'
@@ -422,13 +422,13 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
       formOp.reset();
       document.getElementById('gop-id').value = '';
       document.getElementById('modal-gasto-op-titulo').innerHTML = `<i class="bi bi-fuel-pump"></i> Registrar Gasto Operativo`;
-      document.getElementById('gop-fecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('gop-fecha').value = hoyISO();
       modalOp.classList.add('show');
     } else {
       formAdmin.reset();
       document.getElementById('gad-id').value = '';
       document.getElementById('modal-gasto-admin-titulo').innerHTML = `<i class="bi bi-building"></i> Registrar Gasto Administrativo`;
-      document.getElementById('gad-fecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('gad-fecha').value = hoyISO();
       modalAdmin.classList.add('show');
     }
   }

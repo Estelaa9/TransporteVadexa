@@ -4,7 +4,7 @@
 // o manualmente con: php migrations/migrar.php
 // Fase 1 (base de datos) del plan de corrección de la auditoría.
 
-const VADEXSA_SCHEMA_VERSION = 2;
+const VADEXSA_SCHEMA_VERSION = 3;
 
 function vadexsa_migrar_si_hace_falta(mysqli $conn): void {
     try {
@@ -28,6 +28,14 @@ function vadexsa_migrar_si_hace_falta(mysqli $conn): void {
             // Las cuentas creadas después siguen debiendo cambiar su contraseña inicial.
             mysqli_query($conn, "UPDATE usuarios SET debe_cambiar_password = 0 WHERE rol = 'administrador'");
             db_query($conn, 'INSERT INTO schema_version (version, descripcion) VALUES (2, ?)', 's', ['Administradores existentes sin cambio obligatorio de contraseña']);
+        }
+        if ($version < 3) {
+            // BD-06: estados guardados como texto libre («Activo», 'activo ') se normalizan a minúsculas.
+            foreach (['proveedores', 'vehiculos', 'conductores', 'usuarios'] as $t) {
+                mysqli_query($conn, "UPDATE `$t` SET estado = LOWER(TRIM(estado)) WHERE estado <> LOWER(TRIM(estado)) COLLATE utf8mb4_bin");
+            }
+            mysqli_query($conn, "UPDATE servicios SET estado_servicio = LOWER(TRIM(estado_servicio)) WHERE estado_servicio <> LOWER(TRIM(estado_servicio)) COLLATE utf8mb4_bin");
+            db_query($conn, 'INSERT INTO schema_version (version, descripcion) VALUES (3, ?)', 's', ['Estados normalizados a minúsculas']);
         }
     } finally {
         mysqli_query($conn, 'SELECT RELEASE_LOCK(CONCAT(DATABASE(), ":migracion"))');
@@ -187,6 +195,11 @@ function vadexsa_migracion_1(mysqli $c): void {
     mig_indice($c, 'gastos_administrativos', 'idx_ga_fecha', 'INDEX idx_ga_fecha (fecha)');
 
     /* --- Servicios (BD-02, BD-03, BD-08, BD-13, NEG-21) --- */
+    // Columnas que la versión anterior creaba en tiempo de ejecución: pueden faltar en una base instalada desde cero.
+    mig_columna($c, 'servicios', 'proveedor_id', 'INT NULL');
+    mig_columna($c, 'servicios', 'fecha_emision', 'DATE NULL');
+    mig_columna($c, 'servicios', 'monto_detraccion', 'DECIMAL(12,2) NOT NULL DEFAULT 0.00');
+    mig_columna($c, 'servicios', 'estado_comprobante', "VARCHAR(20) NOT NULL DEFAULT 'pendiente'");
     mig_columna($c, 'servicios', 'hora_fin_estimada', 'TIME NULL');
     mig_columna($c, 'servicios', 'peso_kg', 'DECIMAL(10,2) NULL');
     mig_columna($c, 'servicios', 'comprobante_id', 'INT NULL');
