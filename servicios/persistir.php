@@ -1,78 +1,143 @@
 <?php
-// Persistencia común de altas y ediciones: validación, reservas y montos.
+// servicios/persistir.php - Alta (guardar.php) y edición (actualizar.php) de servicios.
+// NEG-01 margen sin IGV · NEG-06 solapamiento por intervalos · NEG-07 estado de unidad/conductor
+// NEG-08 misma validación al editar · NEG-09 documentos vencidos · NEG-10 capacidad · NEG-11 tercerizados
+// NEG-12 el comprobante se emite después en Facturación · NEG-14 máquina de estados · NEG-15 bloqueo tras facturar
+// NEG-16 montos recalculados en el servidor · CON-03 validación e inserción bajo bloqueo · CON-04 control de versión.
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../config/gestion.php';
+require_once __DIR__ . '/../config/crud.php';
+require_once __DIR__ . '/reglas.php';
+crud_solo_incluido();
 require_auth();
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_response(['success'=>false,'error'=>'Método no permitido.'],405);
+require_method('POST');
 $data = get_request_data();
-$editing = defined('SERVICIO_EDITAR') && SERVICIO_EDITAR;
-$id = $editing ? (int)($data['id'] ?? 0) : 0;
+$editing = defined('SERVICIO_EDITAR');
 $locked = false;
+
 try {
+    $id = $editing ? (int)($data['id'] ?? 0) : 0;
     if ($editing && $id <= 0) throw new InvalidArgumentException('Servicio no especificado.');
+
     $fecha = (string)($data['fecha_servicio'] ?? '');
-    $hora = trim((string)($data['hora_servicio'] ?? $data['hora'] ?? '')) ?: '00:00:00';
-    if (strlen($hora)===5) $hora .= ':00';
-    if (!gestion_fecha($fecha) || !preg_match('/^(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/',$hora)) throw new InvalidArgumentException('Fecha u hora no válida.');
-    $values = ['fecha_servicio'=>$fecha,'hora_servicio'=>$hora];
-    foreach (['cliente_id'=>'clientes','vehiculo_id'=>'vehiculos','conductor_id'=>'conductores'] as $key=>$table) {
-        $value = (int)($data[$key] ?? 0);
-        $stmt = gestion_query($conn,"SELECT id FROM $table WHERE id=?",'i',[$value]);
-        if (!$value || !mysqli_fetch_assoc(mysqli_stmt_get_result($stmt))) throw new InvalidArgumentException('Seleccione cliente, vehículo y conductor registrados.');
-        $values[$key]=$value;
+    if (!validar_fecha($fecha)) throw new InvalidArgumentException('Ingrese una fecha de servicio válida.');
+    $hora = validar_hora($data['hora_servicio'] ?? $data['hora'] ?? '');
+    if (!$hora) throw new InvalidArgumentException('Ingrese la hora de inicio del servicio.');
+    $horaFin = trim((string)($data['hora_fin_estimada'] ?? ''));
+    $horaFin = $horaFin === '' ? date('H:i:s', strtotime("$fecha $hora +4 hours")) : validar_hora($horaFin);
+    if (!$horaFin || $horaFin === $hora) throw new InvalidArgumentException('Ingrese una hora de fin estimada distinta de la hora de inicio.');
+
+    $clienteId = (int)($data['cliente_id'] ?? 0);
+    $cliente = db_one($conn, 'SELECT id, documento, tipo_cliente FROM clientes WHERE id = ?', 'i', [$clienteId]);
+    if (!$cliente) throw new InvalidArgumentException('Seleccione un cliente registrado.');
+
+    $modalidad = validar_opcion($data['modalidad'] ?? 'propio', ['propio', 'tercerizado'], 'modalidad');
+    $tipoComprobante = validar_opcion($data['tipo_comprobante'] ?? 'FACTURA', ['FACTURA', 'BOLETA', 'SIN_COMPROBANTE'], 'comprobante');
+    if ($tipoComprobante === 'FACTURA' && !validar_ruc((string)$cliente['documento'])) {
+        throw new InvalidArgumentException('Para emitir factura el cliente debe tener un RUC válido. Corrija el cliente o elija boleta.');
     }
-    foreach (['tipo_servicio'=>['Local',50],'tipo_carga'=>['General',100],'modalidad'=>['propio',20],'forma_pago'=>['Contado',50],'origen'=>['',4000],'destino'=>['',4000],'guia_remitente'=>['',30],'tipo_comprobante'=>['FACTURA',20],'estado_servicio'=>['programado',20]] as $key=>[$default,$max]) {
-        $value=trim((string)($data[$key]??$default));
-        if (mb_strlen($value)>$max) throw new InvalidArgumentException("El campo $key es demasiado largo.");
-        $values[$key]=$value;
-    }
-    if (!$values['origen'] || !$values['destino'] || !in_array($values['modalidad'],['propio','tercerizado'],true) || !in_array($values['tipo_comprobante'],['FACTURA','BOLETA','SIN_COMPROBANTE'],true) || !in_array($values['estado_servicio'],['programado','en_ruta','finalizado','cancelado'],true)) throw new InvalidArgumentException('Revise origen, destino, modalidad, comprobante y estado.');
-    $values['precio_cliente']=gestion_monto($data['precio_cliente']??'');
-    $values['costo_proveedor']=$values['modalidad']==='propio'?0:gestion_monto($data['costo_proveedor']??0);
-    $lock=mysqli_fetch_row(mysqli_query($conn,"SELECT GET_LOCK(CONCAT(DATABASE(), ':reservas'),5)"));
-    if ((int)$lock[0]!==1) throw new RuntimeException('No se pudo bloquear la programación.');
-    $locked=true; mysqli_begin_transaction($conn);
-    $original=null;
-    if ($editing) {
-        $stmt=gestion_query($conn,'SELECT * FROM servicios WHERE id=? FOR UPDATE','i',[$id]);
-        $original=mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
-        if (!$original) throw new InvalidArgumentException('Servicio no encontrado.');
-        $issued=trim($original['numero_factura']??'')!=='';
-        if ($issued && ($values['precio_cliente']!=(float)$original['precio_cliente'] || $values['cliente_id']!=$original['cliente_id'] || $values['tipo_comprobante']!==$original['tipo_comprobante'] || $values['estado_servicio']==='cancelado')) throw new DomainException('El servicio tiene comprobante: no puede cambiar cliente, importe, tipo ni cancelarlo.');
-        $stmt=gestion_query($conn,'SELECT COALESCE(SUM(monto),0) FROM servicio_abonos WHERE servicio_id=?','i',[$id]);
-        $abonado=(float)mysqli_fetch_row(mysqli_stmt_get_result($stmt))[0];
-        if ($abonado>0 && ($values['precio_cliente']<$abonado || $values['cliente_id']!=$original['cliente_id'] || $values['estado_servicio']==='cancelado')) throw new DomainException('El servicio tiene abonos: conserve el cliente y un importe que cubra lo cobrado; no puede cancelarlo.');
-        $transitions=['programado'=>['en_ruta','cancelado'],'en_ruta'=>['finalizado','cancelado'],'finalizado'=>[],'cancelado'=>[]];
-        if ($values['estado_servicio']!==$original['estado_servicio'] && !in_array($values['estado_servicio'],$transitions[$original['estado_servicio']]??[],true)) throw new DomainException('La transición de estado no está permitida.');
-    }
-    if ($values['estado_servicio']!=='cancelado') {
-        $stmt=gestion_query($conn,"SELECT id FROM servicios WHERE id<>? AND fecha_servicio=? AND hora_servicio=? AND estado_servicio<>'cancelado' AND (vehiculo_id=? OR conductor_id=?) LIMIT 1",'issii',[$id,$fecha,$hora,$values['vehiculo_id'],$values['conductor_id']]);
-        if (mysqli_fetch_assoc(mysqli_stmt_get_result($stmt))) throw new DomainException('El vehículo o conductor ya está reservado en esa fecha y horario.');
-    }
-    $values['base_imponible']=$values['tipo_comprobante']==='SIN_COMPROBANTE'?$values['precio_cliente']:round($values['precio_cliente']/1.18,2);
-    $values['igv']=round($values['precio_cliente']-$values['base_imponible'],2);
-    $values['utilidad']=round($values['precio_cliente']-$values['costo_proveedor'],2);
-    if ($editing) {
-        $columns=implode(', ',array_map(fn($key)=>"$key=?",array_keys($values)));
-        gestion_query($conn,"UPDATE servicios SET $columns WHERE id=?",str_repeat('s',count($values)).'i',array_merge(array_values($values),[$id]));
-        if ($values['modalidad']==='propio') {
-            gestion_query($conn,'UPDATE servicios SET proveedor_id=NULL WHERE id=?','i',[$id]);
-            gestion_query($conn,'UPDATE servicio_operacion SET proveedor_id=NULL WHERE servicio_id=?','i',[$id]);
-        }
-        $guia=$original['guia_transportista']; $numero=$original['numero_factura'];
+    $precio = validar_monto($data['precio_cliente'] ?? '', true);
+    $peso = trim((string)($data['peso_kg'] ?? ''));
+    $peso = $peso === '' ? null : validar_monto($peso);
+
+    $values = [
+        'fecha_servicio' => $fecha,
+        'hora_servicio' => $hora,
+        'hora_fin_estimada' => $horaFin,
+        'cliente_id' => $clienteId,
+        'modalidad' => $modalidad,
+        'tipo_servicio' => validar_opcion($data['tipo_servicio'] ?? 'Local', ['Local', 'Provincia', 'Mudanza', 'Distribución', 'Especial'], 'tipo de servicio'),
+        'tipo_carga' => validar_texto($data['tipo_carga'] ?? 'General', 'tipo de carga', 100),
+        'forma_pago' => validar_opcion($data['forma_pago'] ?? 'Contado', ['Contado', 'Crédito 15 días', 'Crédito 30 días', 'Contra entrega'], 'forma de pago'),
+        'origen' => validar_texto($data['origen'] ?? '', 'origen', 500, true),
+        'destino' => validar_texto($data['destino'] ?? '', 'destino', 500, true),
+        'guia_remitente' => validar_texto($data['guia_remitente'] ?? '', 'guía de remitente', 30),
+        'tipo_comprobante' => $tipoComprobante,
+        'precio_cliente' => $precio,
+        'peso_kg' => $peso,
+    ];
+
+    // NEG-11: un servicio tercerizado no ocupa flota propia y exige proveedor.
+    $avisos = [];
+    if ($modalidad === 'tercerizado') {
+        $proveedorId = (int)($data['proveedor_id'] ?? 0);
+        $prov = db_one($conn, 'SELECT id, estado FROM proveedores WHERE id = ?', 'i', [$proveedorId]);
+        if (!$prov) throw new InvalidArgumentException('Seleccione el proveedor que realizará el servicio tercerizado.');
+        if (strtolower(trim((string)$prov['estado'])) !== 'activo') throw new InvalidArgumentException('El proveedor seleccionado está inactivo.');
+        $values += ['vehiculo_id' => null, 'conductor_id' => null, 'proveedor_id' => $proveedorId, 'costo_proveedor' => validar_monto($data['costo_proveedor'] ?? 0)];
     } else {
-        $values['numero_factura']='';
-        $columns=implode(',',array_keys($values)); $marks=implode(',',array_fill(0,count($values),'?'));
-        gestion_query($conn,"INSERT INTO servicios ($columns) VALUES ($marks)",str_repeat('s',count($values)),array_values($values));
-        $id=mysqli_insert_id($conn); $guia='GRT-'.str_pad($id,6,'0',STR_PAD_LEFT); $numero='';
-        gestion_query($conn,'UPDATE servicios SET guia_transportista=? WHERE id=?','si',[$guia,$id]);
+        $vehiculoId = (int)($data['vehiculo_id'] ?? 0);
+        $conductorId = (int)($data['conductor_id'] ?? 0);
+        $avisos = servicio_validar_asignacion($conn, $vehiculoId, $conductorId, $fecha, $peso);
+        $values += ['vehiculo_id' => $vehiculoId, 'conductor_id' => $conductorId, 'proveedor_id' => null, 'costo_proveedor' => 0.0];
+    }
+
+    // NEG-16: el servidor recalcula siempre los montos; NEG-01: margen = base imponible − costo del proveedor (sin IGV).
+    [$values['base_imponible'], $values['igv']] = calcular_igv($precio, $tipoComprobante);
+    $values['utilidad'] = round($values['base_imponible'] - $values['costo_proveedor'], 2);
+
+    $lock = (int)db_value($conn, "SELECT GET_LOCK(CONCAT(DATABASE(), ':reservas'), 10)");
+    if ($lock !== 1) throw new RuntimeException('No se pudo bloquear la programación. Intente de nuevo.');
+    $locked = true;
+    mysqli_begin_transaction($conn);
+
+    $original = null;
+    if ($editing) {
+        $original = db_one($conn, 'SELECT * FROM servicios WHERE id = ? FOR UPDATE', 'i', [$id]);
+        if (!$original) throw new InvalidArgumentException('Servicio no encontrado.');
+        if (isset($data['version']) && (int)$data['version'] !== (int)$original['version']) {
+            throw new DomainException('Otro usuario modificó este servicio mientras lo editaba. Vuelva a abrirlo para ver los cambios.');
+        }
+        if ($original['estado_servicio'] === 'cancelado') throw new DomainException('El servicio está anulado y no se puede editar.');
+        if (!empty($original['comprobante_id'])) {
+            foreach (['cliente_id', 'precio_cliente', 'tipo_comprobante', 'costo_proveedor', 'modalidad'] as $campo) {
+                $cambio = is_numeric($values[$campo]) ? round((float)$values[$campo], 2) !== round((float)$original[$campo], 2) : (string)$values[$campo] !== (string)$original[$campo];
+                if ($cambio) {
+                    throw new DomainException('El servicio ya tiene comprobante: no puede cambiar cliente, importes, modalidad ni tipo de comprobante. Corrija con una nota de crédito en Facturación.');
+                }
+            }
+        }
+        $estado = validar_opcion($data['estado_servicio'] ?? $original['estado_servicio'], ['programado', 'en_ruta', 'finalizado'], 'estado');
+        if ($estado !== $original['estado_servicio'] && !servicio_transicion_valida($original['estado_servicio'], $estado)) {
+            throw new DomainException('La transición de estado no está permitida.');
+        }
+    } else {
+        $estado = validar_opcion($data['estado_servicio'] ?? 'programado', ['programado', 'en_ruta', 'finalizado'], 'estado');
+    }
+    $values['estado_servicio'] = $estado;
+
+    if ($modalidad === 'propio') {
+        $cruce = servicio_buscar_cruce($conn, $id, $fecha, $hora, $horaFin, $values['vehiculo_id'], $values['conductor_id']);
+        if ($cruce) {
+            throw new DomainException("El vehículo o el conductor ya está asignado al servicio #{$cruce['id']} de {$cruce['inicio']} a {$cruce['fin']}.");
+        }
+    }
+
+    $usuario = $_SESSION['usuario'];
+    if ($editing) {
+        $values['updated_by'] = $usuario;
+        $set = implode(', ', array_map(fn($k) => "`$k` = ?", array_keys($values)));
+        db_query($conn, "UPDATE servicios SET $set, version = version + 1 WHERE id = ?", str_repeat('s', count($values)) . 'i', array_merge(array_values($values), [$id]));
+        if ($modalidad === 'propio') db_query($conn, 'UPDATE servicio_operacion SET proveedor_id = NULL WHERE servicio_id = ?', 'i', [$id]);
+        auditar('editar', 'servicios', $id, $original, $values);
+        $guia = $original['guia_transportista'];
+    } else {
+        $values['created_by'] = $usuario;
+        $cols = implode(', ', array_map(fn($k) => "`$k`", array_keys($values)));
+        db_query($conn, "INSERT INTO servicios ($cols) VALUES (" . implode(', ', array_fill(0, count($values), '?')) . ')', str_repeat('s', count($values)), array_values($values));
+        $id = mysqli_insert_id($conn);
+        // Correlativo interno de la guía a partir del id autoincremental: no se repite aunque se registren dos a la vez (CON-01).
+        $guia = 'GRT-' . str_pad((string)$id, 6, '0', STR_PAD_LEFT);
+        db_query($conn, 'UPDATE servicios SET guia_transportista = ? WHERE id = ?', 'si', [$guia, $id]);
+        auditar('crear', 'servicios', $id, null, $values + ['guia_transportista' => $guia]);
     }
     mysqli_commit($conn);
-    mysqli_query($conn,"SELECT RELEASE_LOCK(CONCAT(DATABASE(), ':reservas'))");
-    json_response(['success'=>true,'id'=>$id,'guia_transportista'=>$guia,'numero_factura'=>$numero,'message'=>'Servicio guardado correctamente.'],$editing?200:201);
+    mysqli_query($conn, "SELECT RELEASE_LOCK(CONCAT(DATABASE(), ':reservas'))");
+    json_response(['success' => true, 'id' => $id, 'guia_transportista' => $guia, 'avisos' => $avisos,
+        'message' => 'Servicio guardado correctamente.' . ($avisos ? ' Atención: ' . implode(' ', $avisos) : '')], $editing ? 200 : 201);
+} catch (InvalidArgumentException | DomainException $e) {
+    if ($locked) { mysqli_rollback($conn); mysqli_query($conn, "SELECT RELEASE_LOCK(CONCAT(DATABASE(), ':reservas'))"); }
+    json_response(['success' => false, 'error' => $e->getMessage()], $e instanceof DomainException ? 409 : 422);
 } catch (Throwable $e) {
-    if ($locked) { mysqli_rollback($conn); mysqli_query($conn,"SELECT RELEASE_LOCK(CONCAT(DATABASE(), ':reservas'))"); }
-    error_log($e->getMessage());
-    $known=$e instanceof InvalidArgumentException || $e instanceof DomainException;
-    json_response(['success'=>false,'error'=>$known?$e->getMessage():'No se pudo guardar el servicio. Verifique los datos y la migración de gestión.'],$e instanceof DomainException?409:($known?422:500));
+    if ($locked) { mysqli_rollback($conn); mysqli_query($conn, "SELECT RELEASE_LOCK(CONCAT(DATABASE(), ':reservas'))"); }
+    throw $e;
 }

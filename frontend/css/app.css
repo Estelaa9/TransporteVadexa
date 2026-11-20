@@ -1256,3 +1256,101 @@ body {
 .gestion-legend { background:#eff6ff; border-left:3px solid #2563eb; padding:12px; color:#334155; }
 [hidden] { display:none !important; }
 @media print { .gestion-grid, details, .tms-toolbar, .no-export { display:none !important; } .tms-table-container { overflow:visible; } }
+
+/* ===== Mejoras v2.2: alertas, estados de comprobante/pago, matriz de permisos y análisis ===== */
+.alert-tms { padding: 16px 20px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; margin-bottom: 16px; }
+.alert-tms h5 { margin: 0 0 6px; font-size: 15px; }
+.alert-tms p { margin: 0 0 10px; }
+.alert-tms.danger { background: #fee2e2; border-color: #fecdd3; color: #991b1b; }
+.alert-tms.warning { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+.alert-tms.info { background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; }
+.alert-tms.success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+.fac-pendiente { background: #fef3c7; color: #92400e; }
+.fac-parcial { background: #dbeafe; color: #1e40af; }
+.fac-anulada, .fac-no_aplica { background: #f1f5f9; color: #475569; text-decoration: line-through; }
+.fac-vencida, .prio-critica, .fac-prio-critica { background: #fee2e2; color: #991b1b; }
+.fac-proxima, .prio-alta, .fac-prio-alta { background: #ffedd5; color: #9a3412; }
+.fac-por_vencer, .prio-media, .fac-prio-media { background: #fef9c3; color: #854d0e; }
+.prio-baja, .fac-prio-baja { background: #dcfce7; color: #166534; }
+.facturas-dialog.wide { width: min(760px, 94vw); }
+.facturas-dialog label { display: block; margin: 10px 0; font-size: 13px; }
+.facturas-dialog label > input, .facturas-dialog label > select, .facturas-dialog label > textarea { width: 100%; margin-top: 4px; }
+.tabs-tms { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin: 12px 0 16px; flex-wrap: wrap; }
+.tabs-tms button { background: none; border: none; padding: 10px 14px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tabs-tms button[aria-selected="true"] { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+.perm-matrix { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+.perm-matrix th, .perm-matrix td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; }
+.perm-matrix th:first-child, .perm-matrix td:first-child { text-align: left; }
+.perm-matrix td small { display: block; color: #64748b; font-weight: 400; }
+.perm-matrix input[type=checkbox] { width: 16px; height: 16px; }
+.analisis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.analisis-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
+.analisis-card h3 { font-size: 15px; margin: 0 0 12px; }
+.analisis-card ul { margin: 0; padding-left: 18px; }
+.analisis-card li { margin: 8px 0; }
+.analisis-card.critico { border-left: 4px solid #dc2626; }
+.analisis-card.negativo { border-left: 4px solid #ea580c; }
+.analisis-card.positivo { border-left: 4px solid #16a34a; }
+.tend-mejora { color: #15803d; font-weight: 600; }
+.tend-empeora { color: #b91c1c; font-weight: 600; }
+.muted { color: #64748b; font-size: 12px; }
+@media print {
+  .tms-sidebar, .tms-topbar, .tms-chat-fab, .tms-chat-panel, .no-print { display: none !important; }
+  .tms-main-wrapper { margin-left: 0 !important; }
+  .analisis-card { break-inside: avoid; }
+}
+
+/* ===== Paginación y orden de tablas (frontend/js/paginacion.js) ===== */
+tr[data-pag-oculta] { display: none; }
+.tms-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 10px 0 18px; font-size: 12.5px; color: #475569; }
+.tms-pager-botones { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.tms-pager button { min-width: 34px; padding: 6px 10px; border: 1px solid #cbd5e1; background: #fff; color: #1e293b; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12.5px; }
+.tms-pager button:hover:not(:disabled) { background: #eff6ff; border-color: #93c5fd; }
+.tms-pager button.activa { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.tms-pager button:disabled { opacity: .45; cursor: default; }
+.tms-pager button:focus-visible, .tms-pager select:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+.tms-pager-sep { padding: 0 4px; color: #94a3b8; }
+.tms-pager-tamano select { margin-left: 6px; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 6px; }
+.tms-table thead th.ordenable { cursor: pointer; user-select: none; }
+.tms-table thead th.ordenable:hover { background: #e2e8f0; }
+.tms-table thead th[data-orden="asc"]::after { content: " ▲"; font-size: 9px; }
+.tms-table thead th[data-orden="desc"]::after { content: " ▼"; font-size: 9px; }
+@media print { tr[data-pag-oculta] { display: table-row !important; } .tms-pager { display: none !important; } }
+
+/* ===== Asistente de servicio (servicio-wizard.js) ===== */
+.srvw-bloqueados { display: grid; gap: 10px; margin-bottom: 14px; }
+.srvw-bloque { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 8px; padding: 10px 14px; }
+.srvw-bloque-tit { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700; color: #334155; font-size: 13px; margin-bottom: 6px; }
+.srvw-bloque-tit .bi-lock-fill { color: #64748b; }
+.srvw-bloque-tit .btn-tms { padding: 3px 10px; font-size: 11.5px; }
+.srvw-bloque dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 16px; margin: 0; }
+.srvw-bloque dt { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .3px; }
+.srvw-bloque dd { margin: 0; font-size: 13px; color: #0f172a; font-weight: 600; }
+#srvw-revision .srvw-bloque { margin-bottom: 10px; background: #fff; }
+.srvw-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.srvw-opcion { position: relative; cursor: pointer; }
+.srvw-opcion input { position: absolute; opacity: 0; }
+.srvw-opcion span { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center; padding: 14px 16px; border: 2px solid #e2e8f0; border-radius: 10px; background: #fff; }
+.srvw-opcion span i { grid-row: span 2; font-size: 24px; color: #64748b; }
+.srvw-opcion span small { color: #64748b; }
+.srvw-opcion input:checked + span { border-color: #1d4ed8; background: #eff6ff; }
+.srvw-opcion input:checked + span i { color: #1d4ed8; }
+.srvw-opcion input:focus-visible + span { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+.srvw-opcion input:disabled + span { opacity: .55; cursor: not-allowed; }
+@media (max-width: 640px) { .srvw-opciones { grid-template-columns: 1fr; } }
+
+/* ===== Disponibilidad de conductores (Programación diaria) ===== */
+.disp-panel { margin-top: 24px; background: #fff; padding: 16px 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-light); }
+.disp-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.disp-head h6 { font-size: 15px; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px; }
+.disp-filtros { display: flex; gap: 8px; flex-wrap: wrap; }
+.disp-filtros .form-control-tms { width: auto; min-width: 190px; }
+.disp-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.disp-kpi { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; cursor: pointer; text-align: left; font-size: 12.5px; color: #334155; }
+.disp-kpi strong { font-size: 20px; color: #0f172a; }
+.disp-kpi.activo { border-color: #1d4ed8; background: #eff6ff; box-shadow: inset 0 0 0 1px #1d4ed8; }
+.disp-kpi:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+.disp-libre i { color: #16a34a; }
+.disp-con_viajes i { color: #2563eb; }
+.disp-no_habilitado i { color: #dc2626; }
+.disp-viajes { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-size: 11.5px; color: #475569; }

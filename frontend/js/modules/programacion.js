@@ -1,8 +1,10 @@
 // frontend/js/modules/programacion.js - Programación y Despacho Diario
-import { api, showToast, fmt } from '../api.js';
+import { api, showToast, fmt, esc, hoyISO } from '../api.js';
+import { auth } from './auth.js';
 
 export async function renderProgramacion(container) {
-  let selectedDate = new Date().toISOString().split('T')[0];
+  let selectedDate = hoyISO();
+  let conductoresDia = [];
 
   container.innerHTML = `
     <div class="page-title-box">
@@ -77,15 +79,28 @@ export async function renderProgramacion(container) {
       </table>
     </div>
 
-    <!-- Conductores Disponibles para la fecha -->
-    <div style="margin-top: 24px; background: #ffffff; padding: 16px 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-light);">
-      <h6 style="font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-        <i class="bi bi-person-check-fill text-success"></i> Conductores Disponibles para esta fecha
-      </h6>
-      <div id="prog-conductores-disponibles" style="display: flex; flex-wrap: wrap; gap: 8px;">
-        <span style="color: #64748b; font-size: 12px;">Consultando disponibilidad...</span>
+    <!-- Disponibilidad de conductores para la fecha -->
+    <section class="disp-panel" aria-labelledby="disp-titulo">
+      <div class="disp-head">
+        <h6 id="disp-titulo"><i class="bi bi-person-check-fill text-success"></i> Disponibilidad de conductores <span id="disp-fecha" class="muted"></span></h6>
+        <div class="disp-filtros">
+          <select id="disp-filtro" class="form-control-tms" aria-label="Filtrar conductores">
+            <option value="libre">Libres todo el día</option>
+            <option value="con_viajes">Con viajes asignados</option>
+            <option value="no_habilitado">No habilitados</option>
+            <option value="">Todos</option>
+          </select>
+          <input id="disp-buscar" type="search" class="form-control-tms" placeholder="Buscar conductor o licencia" aria-label="Buscar conductor">
+        </div>
       </div>
-    </div>
+      <div class="disp-resumen" id="disp-resumen"></div>
+      <div class="tms-table-container">
+        <table class="tms-table" id="tabla-disponibles">
+          <thead><tr><th>Conductor</th><th>Licencia</th><th>Vence</th><th>Teléfono</th><th>Situación del día</th></tr></thead>
+          <tbody id="disp-body"><tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8;">Consultando disponibilidad...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
   `;
 
   const dateInput = document.getElementById('prog-fecha-filtro');
@@ -141,25 +156,25 @@ export async function renderProgramacion(container) {
       } else {
         tbody.innerHTML = servicios.map(s => `
           <tr>
-            <td><strong style="color: #1d4ed8; font-size: 12.5px;"><i class="bi bi-clock"></i> ${fmt.hora(s.hora_servicio)}</strong></td>
-            <td><strong>#${s.id}</strong></td>
-            <td><strong>${s.cliente || '-'}</strong></td>
-            <td><span class="badge-status" style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;">${s.placa || '-'}</span></td>
-            <td>${s.conductor || '-'}</td>
+            <td><strong style="color: #1d4ed8; font-size: 12.5px;"><i class="bi bi-clock"></i> ${esc(fmt.hora(s.hora_servicio))}–${esc(fmt.hora(s.hora_fin_estimada))}</strong></td>
+            <td><strong>#${esc(s.id)}</strong></td>
+            <td><strong>${esc(s.cliente || '-')}</strong></td>
+            <td><span class="badge-status" style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;">${esc(s.modalidad === 'tercerizado' ? (s.proveedor || 'Tercerizado') : (s.placa || '-'))}</span></td>
+            <td>${esc(s.modalidad === 'tercerizado' ? 'Del proveedor' : (s.conductor || '-'))}</td>
             <td>
-              <div>${s.origen || '-'}</div>
-              <small style="color: #64748b;"><i class="bi bi-arrow-right"></i> ${s.destino || '-'}</small>
+              <div>${esc(s.origen || '-')}</div>
+              <small style="color: #64748b;"><i class="bi bi-arrow-right"></i> ${esc(s.destino || '-')}</small>
             </td>
-            <td><span class="badge-status" style="background:#f8fafc; border:1px solid #e2e8f0;">${s.tipo_carga || 'General'}</span></td>
-            <td><code>${s.guia_transportista || '-'}</code></td>
+            <td><span class="badge-status" style="background:#f8fafc; border:1px solid #e2e8f0;">${esc(s.tipo_carga || 'General')}</span></td>
+            <td><code>${esc(s.guia_transportista || '-')}</code></td>
             <td>${fmt.badgeEstado(s.estado_servicio)}</td>
             <td style="text-align: center; white-space: nowrap;">
-              <select class="form-control-tms select-change-status" data-id="${s.id}" style="width: 125px; display: inline-block; font-size: 11px; padding: 3px 6px;">
-                <option value="programado" ${s.estado_servicio === 'programado' ? 'selected' : ''}>Programado</option>
-                <option value="en_ruta" ${s.estado_servicio === 'en_ruta' ? 'selected' : ''}>En Ruta</option>
-                <option value="finalizado" ${s.estado_servicio === 'finalizado' ? 'selected' : ''}>Finalizado</option>
-                <option value="cancelado" ${s.estado_servicio === 'cancelado' ? 'selected' : ''}>Cancelado</option>
-              </select>
+              ${['finalizado', 'cancelado'].includes(s.estado_servicio) || !auth.can('programacion', 'editar') ? '' : `<select class="form-control-tms select-change-status" data-id="${esc(s.id)}" data-actual="${esc(s.estado_servicio)}" style="width: 125px; display: inline-block; font-size: 11px; padding: 3px 6px;">
+                <option value="programado" ${s.estado_servicio === 'programado' ? 'selected' : ''} ${s.estado_servicio === 'programado' ? '' : 'disabled'}>Programado</option>
+                <option value="en_ruta" ${s.estado_servicio === 'en_ruta' ? 'selected' : ''}>En ruta</option>
+                <option value="finalizado">Finalizado</option>
+                ${auth.can('servicios', 'anular') ? '<option value="cancelado">Anular…</option>' : ''}
+              </select>`}
             </td>
           </tr>
         `).join('');
@@ -168,39 +183,73 @@ export async function renderProgramacion(container) {
           select.addEventListener('change', async (e) => {
             const id = e.target.dataset.id;
             const estado_servicio = e.target.value;
+            let motivo;
+            if (estado_servicio === 'cancelado') {
+              motivo = prompt(`Anular el servicio #${id}. Indique el motivo:`);
+              if (!motivo || motivo.trim().length < 5) { e.target.value = e.target.dataset.actual; if (motivo !== null) showToast('Indique un motivo de al menos 5 caracteres.', 'warning'); return; }
+            }
             try {
-              const res = await api.post('servicios/cambiar_estado.php', { id, estado_servicio });
+              const res = await api.post('servicios/cambiar_estado.php', { id, estado_servicio, motivo });
               if (res.success) {
                 showToast(`Estado del servicio #${id} actualizado a ${estado_servicio}`, 'success');
                 loadProgramacion();
               }
             } catch (err) {
+              e.target.value = e.target.dataset.actual;
               showToast(err.message || 'Error al cambiar estado', 'error');
             }
           });
         });
       }
 
-      const contDisponibles = document.getElementById('prog-conductores-disponibles');
-      const disponibles = resDisponibles.data || [];
-      if (disponibles.length === 0) {
-        contDisponibles.innerHTML = `<span style="color: #ef4444; font-size: 12px;"><i class="bi bi-exclamation-circle"></i> No hay conductores libres registrados para esta fecha.</span>`;
-      } else {
-        contDisponibles.innerHTML = disponibles.map(c => `
-          <span style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="bi bi-person-check"></i> ${c.nombre} (${c.telefono || 'Sin tel.'})
-          </span>
-        `).join('');
-      }
+      conductoresDia = resDisponibles.todos || [];
+      const r = resDisponibles.resumen || {};
+      document.getElementById('disp-fecha').textContent = '· ' + fmt.fecha(selectedDate);
+      document.getElementById('disp-resumen').innerHTML = [
+        ['libre', 'Libres todo el día', r.libres, 'bi-check-circle-fill'],
+        ['con_viajes', 'Con viajes asignados', r.con_viajes, 'bi-truck'],
+        ['no_habilitado', 'No habilitados', r.no_habilitados, 'bi-slash-circle'],
+      ].map(([k, l, n, i]) => `<button type="button" class="disp-kpi disp-${k}" data-filtro="${k}"><i class="bi ${i}"></i><strong>${esc(n ?? 0)}</strong><span>${l}</span></button>`).join('');
+      renderDisponibles();
 
     } catch (err) {
       showToast(err.message || 'Error al cargar programación', 'error');
     }
   }
 
+  // Tabla de disponibilidad: filtro por situación y búsqueda por nombre o licencia.
+  function renderDisponibles() {
+    const filtro = document.getElementById('disp-filtro').value;
+    const q = document.getElementById('disp-buscar').value.trim().toLowerCase();
+    const filas = conductoresDia.filter(c => (!filtro || c.situacion === filtro) &&
+      (!q || `${c.nombre} ${c.licencia} ${c.categoria_licencia || ''}`.toLowerCase().includes(q)));
+    document.querySelectorAll('#disp-resumen .disp-kpi').forEach(b => b.classList.toggle('activo', b.dataset.filtro === filtro));
+    const situacion = c => {
+      if (c.situacion === 'libre') return '<span class="facturas-status fac-pagada">Libre todo el día</span>';
+      if (c.situacion === 'no_habilitado') return `<span class="facturas-status fac-vencida">${esc(c.motivo)}</span>`;
+      return `<span class="facturas-status fac-parcial">Con ${c.viajes.length} viaje(s)</span><div class="disp-viajes">${c.viajes.map(v =>
+        `<span>#${esc(v.id)} ${esc(v.inicio)}–${esc(v.fin)} · ${esc(v.cliente || '')}</span>`).join('')}</div>`;
+    };
+    document.getElementById('disp-body').innerHTML = filas.map(c => `<tr>
+      <td><strong>${esc(c.nombre)}</strong></td>
+      <td><code>${esc(c.licencia || '-')}</code>${c.categoria_licencia ? ` <small class="muted">${esc(c.categoria_licencia)}</small>` : ''}</td>
+      <td>${c.licencia_vencimiento ? esc(fmt.fecha(c.licencia_vencimiento)) : '<small class="muted">Sin dato</small>'}${c.licencia_por_vencer ? '<br><span class="facturas-status fac-proxima">Vence pronto</span>' : ''}</td>
+      <td>${c.telefono ? `<a href="tel:${esc(c.telefono)}">${esc(c.telefono)}</a>` : '-'}</td>
+      <td>${situacion(c)}</td></tr>`).join('')
+      || `<tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b;">No hay conductores en esta categoría para la fecha.</td></tr>`;
+  }
+  document.getElementById('disp-filtro').addEventListener('change', renderDisponibles);
+  document.getElementById('disp-buscar').addEventListener('input', renderDisponibles);
+  document.getElementById('disp-resumen').addEventListener('click', e => {
+    const b = e.target.closest('[data-filtro]');
+    if (!b) return;
+    document.getElementById('disp-filtro').value = b.dataset.filtro;
+    renderDisponibles();
+  });
+
   dateInput.addEventListener('change', loadProgramacion);
   document.getElementById('btn-prog-hoy').addEventListener('click', () => {
-    dateInput.value = new Date().toISOString().split('T')[0];
+    dateInput.value = hoyISO();
     loadProgramacion();
   });
   document.getElementById('btn-prog-refresh').addEventListener('click', () => {

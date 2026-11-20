@@ -1,0 +1,8 @@
+# Credenciales y configuración local (SEG-05)
+config/env.php
+
+# Registros de la aplicación (ARQ-06)
+logs/*
+!logs/.htaccess
+
+node_modules/

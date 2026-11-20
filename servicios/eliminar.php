@@ -1,39 +1,28 @@
 <?php
-// Cancelación administrativa: conservar historial y bloquear modificaciones concurrentes.
-require_once __DIR__ . "/../config/conexion.php";
+// servicios/eliminar.php - Anulación (cancelación) de un servicio. Nunca borra: conserva la historia (BD-04).
+// Un servicio con comprobante vigente se anula primero con nota de crédito en Facturación (NEG-13).
+require_once __DIR__ . '/../config/conexion.php';
 require_auth();
-require_once __DIR__ . '/../config/gestion.php';
-require_admin();
-if (!in_array($_SERVER['REQUEST_METHOD'], ['POST','DELETE'], true)) json_response(['success'=>false,'error'=>'Método no permitido.'],405);
-
+require_method('POST');
 $data = get_request_data();
-$id = (int)($_GET['id'] ?? $data['id'] ?? 0);
-
-if (!$id) {
-    json_response(["success" => false, "error" => "ID no especificado."], 400);
-}
+$id = (int)($data['id'] ?? 0);
+$motivo = trim((string)($data['motivo'] ?? ''));
+if ($id <= 0) json_response(['success' => false, 'error' => 'Servicio no especificado.'], 422);
+if (mb_strlen($motivo) < 5 || mb_strlen($motivo) > 255) json_response(['success' => false, 'error' => 'Indique el motivo de la anulación (5 a 255 caracteres).'], 422);
 
 mysqli_begin_transaction($conn);
-$existing = mysqli_fetch_assoc(mysqli_query($conn, "SELECT numero_factura FROM servicios WHERE id=$id FOR UPDATE"));
-if (!$existing) { mysqli_rollback($conn); json_response(['success' => false, 'error' => 'Servicio no encontrado.'], 404); }
-if (trim($existing['numero_factura'] ?? '') !== '') { mysqli_rollback($conn); json_response(['success' => false, 'error' => 'No puede cancelar un servicio con comprobante registrado.'], 409); }
-$abonos = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM servicio_abonos WHERE servicio_id=$id"))[0];
-if ($abonos) { mysqli_rollback($conn); json_response(['success' => false, 'error' => 'El servicio tiene abonos registrados y debe conservarse.'], 409); }
-// Conservar trazabilidad de gastos y fichas en lugar de borrar el viaje.
-$sql = "UPDATE servicios SET estado_servicio='cancelado' WHERE id=$id";
-
-if (mysqli_query($conn, $sql)) {
-    mysqli_commit($conn);
-    if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false || $_SERVER['REQUEST_METHOD'] === 'DELETE' || $_SERVER['REQUEST_METHOD'] === 'POST') {
-        json_response([
-            "success" => true,
-            "message" => "Servicio #{$id} cancelado; se conserva su historial."
-        ]);
-    }
-    header("Location: index.php");
-    exit;
-} else {
+$s = db_one($conn, 'SELECT * FROM servicios WHERE id = ? FOR UPDATE', 'i', [$id]);
+if (!$s) { mysqli_rollback($conn); json_response(['success' => false, 'error' => 'Servicio no encontrado.'], 404); }
+if ($s['estado_servicio'] === 'cancelado') { mysqli_rollback($conn); json_response(['success' => false, 'error' => 'El servicio ya está anulado.'], 409); }
+if (!empty($s['comprobante_id'])) {
     mysqli_rollback($conn);
-    json_response(["success" => false, "error" => "Error al eliminar servicio: " . mysqli_error($conn)], 500);
+    json_response(['success' => false, 'error' => 'El servicio tiene un comprobante vigente. Anúlelo primero con nota de crédito en Facturación.'], 409);
 }
-?>
+if ($s['estado_servicio'] === 'finalizado') {
+    mysqli_rollback($conn);
+    json_response(['success' => false, 'error' => 'Un servicio finalizado no se puede cancelar.'], 409);
+}
+db_query($conn, "UPDATE servicios SET estado_servicio = 'cancelado', motivo_cancelacion = ?, updated_by = ?, version = version + 1 WHERE id = ?", 'ssi', [$motivo, $_SESSION['usuario'], $id]);
+auditar('anular', 'servicios', $id, ['estado_servicio' => $s['estado_servicio']], ['estado_servicio' => 'cancelado', 'motivo' => $motivo]);
+mysqli_commit($conn);
+json_response(['success' => true, 'message' => "Servicio #{$id} anulado; se conserva su historial."]);

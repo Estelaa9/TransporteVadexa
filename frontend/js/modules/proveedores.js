@@ -1,5 +1,5 @@
 // frontend/js/modules/proveedores.js - Gestión de Proveedores Tercerizados
-import { api, showToast, exportTableToExcel } from '../api.js';
+import { api, showToast, exportTableToExcel, esc } from '../api.js';
 
 export async function renderProveedores(container) {
   let proveedoresList = [];
@@ -82,9 +82,19 @@ export async function renderProveedores(container) {
                 <input type="text" id="prov-nombre" class="form-control-tms" required placeholder="Ej: Transportes del Norte S.A.C." style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
-              <div class="col-12 form-group">
+              <div class="col-6 form-group">
                 <label class="form-label" style="font-size: 12px; font-weight: 600;">Teléfono / Celular</label>
                 <input type="text" id="prov-telefono" class="form-control-tms" placeholder="987654321" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">RUC</label>
+                <input type="text" id="prov-ruc" class="form-control-tms" inputmode="numeric" maxlength="11" placeholder="11 dígitos" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Estado</label>
+                <select id="prov-estado" class="form-control-tms" style="border: 2px solid #e2e8f0; padding: 10px 14px;"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select>
               </div>
 
               <!-- Información del Vehículo -->
@@ -142,7 +152,7 @@ export async function renderProveedores(container) {
     const q = searchInput.value.toLowerCase().trim();
     const filtered = proveedoresList.filter(p => {
       if (!q) return true;
-      const t = `${p.id} ${p.nombre} ${p.telefono} ${p.vehiculo} ${p.placa}`.toLowerCase();
+      const t = `${esc(p.id)} ${esc(p.nombre)} ${esc(p.telefono)} ${esc(p.vehiculo)} ${esc(p.placa)}`.toLowerCase();
       return t.includes(q);
     });
 
@@ -155,16 +165,16 @@ export async function renderProveedores(container) {
 
     tbody.innerHTML = filtered.map(p => `
       <tr>
-        <td><strong>#${p.id}</strong></td>
-        <td><strong style="color: #0f172a;">${p.nombre}</strong></td>
-        <td>${p.telefono || '-'}</td>
-        <td>${p.vehiculo || '-'}</td>
-        <td><code>${p.placa || '-'}</code></td>
+        <td><strong>#${esc(p.id)}</strong></td>
+        <td><strong style="color: #0f172a;">${esc(p.nombre)}</strong></td>
+        <td>${esc(p.telefono || '-')}</td>
+        <td>${esc(p.vehiculo || '-')}</td>
+        <td><code>${esc(p.placa || '-')}</code></td>
         <td class="no-export" style="text-align: center; white-space: nowrap;">
-          <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${p.id}" title="Editar">
+          <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${esc(p.id)}" title="Editar">
             <i class="bi bi-pencil"></i>
           </button>
-          <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${p.id}" title="Eliminar">
+          <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${esc(p.id)}" title="Eliminar">
             <i class="bi bi-trash"></i>
           </button>
         </td>
@@ -187,11 +197,13 @@ export async function renderProveedores(container) {
         if (res.success && res.data) {
           const p = res.data;
           document.getElementById('prov-id').value = p.id;
-          document.getElementById('modal-proveedor-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Proveedor #${p.id}`;
+          document.getElementById('modal-proveedor-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Proveedor #${esc(p.id)}`;
           document.getElementById('prov-nombre').value = p.nombre || '';
           document.getElementById('prov-telefono').value = p.telefono || '';
           document.getElementById('prov-vehiculo').value = p.vehiculo || '';
           document.getElementById('prov-placa').value = p.placa || '';
+          document.getElementById('prov-ruc').value = p.ruc || '';
+          document.getElementById('prov-estado').value = p.estado || 'activo';
           modal.classList.add('show');
         }
       } catch (err) {
@@ -230,6 +242,8 @@ export async function renderProveedores(container) {
       telefono: document.getElementById('prov-telefono').value.trim(),
       vehiculo: document.getElementById('prov-vehiculo').value.trim(),
       placa: document.getElementById('prov-placa').value.toUpperCase().trim(),
+      ruc: document.getElementById('prov-ruc').value.trim(),
+      estado: document.getElementById('prov-estado').value,
     };
 
     const btn = document.getElementById('btn-guardar-proveedor');

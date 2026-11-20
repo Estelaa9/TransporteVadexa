@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 # 🚚 MANUAL INTEGRAL Y DOCUMENTACIÓN TÉCNICA DEL SISTEMA
 # VADEXSA LOGISTIC — TMS & ERP ENTERPRISE
+=======
+> **Versión 2.2 (18/11/2026):** este documento describe versiones anteriores. Los cambios de la auditoría v2.1 y las tres mejoras (roles y permisos, facturación y cuentas por cobrar, análisis integral) están en [docs/CAMBIOS_AUDITORIA.md](docs/CAMBIOS_AUDITORIA.md). Instalación: [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
+# Documentación del sistema — VADEXSA LOGISTIC / Transporte
+>>>>>>> origin/main
 
 **Organización:** VADEXSA LOGISTIC S.A.C.  
 **RUC:** 20604629293  

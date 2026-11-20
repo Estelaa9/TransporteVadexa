@@ -1,3 +1,4 @@
+-- Superseded: las migraciones se aplican desde config/migraciones.php (php migrations/migrar.php).
 -- Migración aditiva. Ejecutar después de facturas/esquema.sql en transporte_db.
 -- No modifica ni elimina servicios existentes. Se puede ejecutar nuevamente.
 CREATE TABLE IF NOT EXISTS servicio_operacion (

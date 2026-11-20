@@ -1,77 +1,26 @@
 <?php
-// reportes/utilidad.php - Reporte de utilidad y rentabilidad
-require_once __DIR__ . "/../config/conexion.php";
+// reportes/utilidad.php - Margen por servicio = base imponible − costo de terceros − gastos operativos vinculados (NEG-01, NEG-03).
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/lib.php';
 require_auth();
-
-$desde = $_GET['desde'] ?? '';
-$hasta = $_GET['hasta'] ?? '';
-
-$where_fechas = ["estado_servicio = 'finalizado'"];
-if (!empty($desde)) {
-    $d_esc = mysqli_real_escape_string($conn, $desde);
-    $where_fechas[] = "fecha_servicio >= '$d_esc'";
+require_method('GET');
+[$desde, $hasta] = periodo_desde_get();
+$rows = db_all($conn, "SELECT s.id, s.fecha_servicio, s.modalidad, c.nombre AS cliente, s.precio_cliente, s.base_imponible, s.igv, s.costo_proveedor,
+        COALESCE(g.gastos, 0) AS gastos_vinculados,
+        ROUND(s.base_imponible - s.costo_proveedor - COALESCE(g.gastos, 0), 2) AS utilidad
+    FROM servicios s LEFT JOIN clientes c ON c.id = s.cliente_id
+    LEFT JOIN (SELECT servicio_id, SUM(monto) AS gastos FROM gastos_operativos WHERE servicio_id IS NOT NULL GROUP BY servicio_id) g ON g.servicio_id = s.id
+    WHERE s.estado_servicio = 'finalizado' AND s.fecha_servicio BETWEEN ? AND ? ORDER BY s.fecha_servicio DESC, s.id DESC", 'ss', [$desde, $hasta]);
+$t = ['base' => 0, 'costos' => 0, 'gastos' => 0, 'utilidad' => 0, 'cobrado' => 0];
+foreach ($rows as $r) {
+    $t['cobrado'] += (float)$r['precio_cliente'];
+    $t['base'] += (float)$r['base_imponible'];
+    $t['costos'] += (float)$r['costo_proveedor'];
+    $t['gastos'] += (float)$r['gastos_vinculados'];
+    $t['utilidad'] += (float)$r['utilidad'];
 }
-if (!empty($hasta)) {
-    $h_esc = mysqli_real_escape_string($conn, $hasta);
-    $where_fechas[] = "fecha_servicio <= '$h_esc'";
-}
-
-$where_sql = count($where_fechas) > 0 ? "WHERE " . implode(" AND ", $where_fechas) : "";
-
-$sql = "SELECT id, fecha_servicio, modalidad, precio_cliente, costo_proveedor, utilidad
-        FROM servicios
-        $where_sql
-        ORDER BY fecha_servicio DESC";
-
-$result = mysqli_query($conn, $sql);
-$utilidades = [];
-$total_facturado = 0.0;
-$total_costos = 0.0;
-$total_utilidad = 0.0;
-
-while ($row = mysqli_fetch_assoc($result)) {
-    $utilidades[] = $row;
-    $total_facturado += (float)($row['precio_cliente'] ?? 0);
-    $total_costos += (float)($row['costo_proveedor'] ?? 0);
-    $total_utilidad += (float)($row['utilidad'] ?? 0);
-}
-
-if (isset($_GET['json']) || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
-    json_response([
-        "success" => true,
-        "tipo" => "utilidad",
-        "total_registros" => count($utilidades),
-        "total_facturado" => $total_facturado,
-        "total_costos" => $total_costos,
-        "total_utilidad" => $total_utilidad,
-        "data" => $utilidades
-    ]);
-}
-
-include("../layout/header.php");
-include("../layout/sidebar.php");
-?>
-<div class="content">
-<h3 class="mb-4"><i class="bi bi-graph-up"></i> Reporte de Utilidad</h3>
-<div class="card shadow">
-<div class="card-body">
-<table class="table table-striped table-bordered">
-<thead class="table-dark">
-<tr><th>ID</th><th>Fecha</th><th>Modalidad</th><th>Cobrado</th><th>Costo Proveedor</th><th>Utilidad</th></tr>
-</thead>
-<tbody>
-<?php foreach($utilidades as $r){ ?>
-<tr>
-<td><?php echo $r['id']; ?></td>
-<td><?php echo $r['fecha_servicio']; ?></td>
-<td><?php echo $r['modalidad']; ?></td>
-<td>S/ <?php echo number_format($r['precio_cliente'],2); ?></td>
-<td>S/ <?php echo number_format($r['costo_proveedor'],2); ?></td>
-<td>S/ <?php echo number_format($r['utilidad'],2); ?></td>
-</tr>
-<?php } ?>
-</tbody>
-</table>
-</div>
-</div>
-</div>
+json_response(['success' => true, 'tipo' => 'utilidad', 'total_registros' => count($rows),
+    'total_facturado' => round($t['cobrado'], 2), 'total_base' => round($t['base'], 2), 'total_costos' => round($t['costos'], 2),
+    'total_gastos_vinculados' => round($t['gastos'], 2), 'total_utilidad' => round($t['utilidad'], 2),
+    'nota' => 'Margen por servicio sin IGV. Los gastos generales no vinculados a un servicio se descuentan en el cierre del período.',
+    'data' => $rows]);

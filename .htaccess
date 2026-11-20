@@ -1,0 +1,16 @@
+# Configuración de Apache para VADEXSA (requiere AllowOverride All, valor por defecto de WampServer en www).
+Options -Indexes
+
+# SEG-18: forzar HTTPS en cualquier dominio que no sea el entorno local.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# SEG-20, INF-03: archivos de desarrollo y documentación interna no se publican.
+<FilesMatch "(\.bat|\.md|\.url|\.mjs|package-lock\.json|LINK_DE_ACCESO\.html)$">
+  Require all denied
+</FilesMatch>

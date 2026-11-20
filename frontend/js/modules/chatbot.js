@@ -1,4 +1,4 @@
-// frontend/js/modules/chatbot.js - Asistente Virtual Inteligente VADEXSA
+// frontend/js/modules/chatbot.js - Asistente de consultas basado en reglas (UX-01): reconoce palabras clave; no es inteligencia artificial.
 import { api } from '../api.js';
 
 export function initChatbot() {
@@ -19,7 +19,7 @@ export function initChatbot() {
       panel.classList.add('open');
       input.focus();
       if (messagesContainer.children.length === 0) {
-        addBotMessage("¡Hola! Soy el asistente inteligente de **VADEXSA LOGISTIC** 🤖🚚\n\n¿En qué puedo ayudarte hoy?\n• Consulta de servicios del día\n• Estado de un servicio por ID\n• Facturación y utilidad del mes\n• Disponibilidad de conductores");
+        addBotMessage('Hola. Soy el asistente de consultas de VADEXSA (basado en reglas) y estoy conectado a todos los módulos.\nPrueba con:\n• servicios de mañana · servicio #15\n• cliente andina · placa BXK-481 · conductor Pedro\n• F001-000012 · cuentas por cobrar · deudores\n• resultado del mes · diagnóstico del mes\nEscribe «ayuda» para ver todo lo que puedo responder.');
       }
     }
   }
@@ -38,7 +38,9 @@ export function initChatbot() {
   function addBotMessage(text) {
     const div = document.createElement('div');
     div.className = 'chat-bubble bot';
-    div.innerHTML = text.replace(/\n/g, '<br>');
+    // SEG-13: la respuesta se muestra como texto; los saltos de línea se respetan con CSS.
+    div.style.whiteSpace = 'pre-line';
+    div.textContent = String(text ?? '');
     messagesContainer.appendChild(div);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }

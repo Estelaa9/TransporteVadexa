@@ -1,5 +1,5 @@
 // frontend/js/modules/vehiculos.js - Gestión de la Flota de Vehículos
-import { api, showToast, exportTableToExcel } from '../api.js';
+import { api, showToast, exportTableToExcel, esc } from '../api.js';
 
 export async function renderVehiculos(container) {
   let vehiculosList = [];
@@ -108,7 +108,22 @@ export async function renderVehiculos(container) {
                 <input type="text" id="veh-capacidad" class="form-control-tms" placeholder="Ej: 5 Toneladas / 30 m3" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
 
-              <div class="col-12 form-group">
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Capacidad en kg (para validar sobrecarga)</label>
+                <input type="number" min="0" step="0.01" id="veh-capacidad-kg" class="form-control-tms" placeholder="Ej: 5000" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Vencimiento del SOAT</label>
+                <input type="date" id="veh-soat" class="form-control-tms" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">Vencimiento de revisión técnica</label>
+                <input type="date" id="veh-revision" class="form-control-tms" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-6 form-group">
                 <label class="form-label" style="font-size: 12px; font-weight: 600;">Estado Operativo</label>
                 <select id="veh-estado" class="form-control-tms" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
                   <option value="activo">Activo / Operativo</option>
@@ -152,7 +167,7 @@ export async function renderVehiculos(container) {
     const q = searchInput.value.toLowerCase().trim();
     const filtered = vehiculosList.filter(v => {
       if (!q) return true;
-      const t = `${v.id} ${v.placa} ${v.modelo} ${v.tipo} ${v.capacidad} ${v.estado}`.toLowerCase();
+      const t = `${esc(v.id)} ${esc(v.placa)} ${esc(v.modelo)} ${esc(v.tipo)} ${esc(v.capacidad)} ${esc(v.estado)}`.toLowerCase();
       return t.includes(q);
     });
 
@@ -173,17 +188,17 @@ export async function renderVehiculos(container) {
 
       return `
         <tr>
-          <td><strong>#${v.id}</strong></td>
-          <td><strong style="color: #1d4ed8; font-size: 13px; letter-spacing: 0.5px;">${v.placa}</strong></td>
-          <td>${v.modelo || '-'}</td>
-          <td><span class="badge-status" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">${v.tipo || '-'}</span></td>
-          <td>${v.capacidad || '-'}</td>
+          <td><strong>#${esc(v.id)}</strong></td>
+          <td><strong style="color: #1d4ed8; font-size: 13px; letter-spacing: 0.5px;">${esc(v.placa)}</strong></td>
+          <td>${esc(v.modelo || '-')}</td>
+          <td><span class="badge-status" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">${esc(v.tipo || '-')}</span></td>
+          <td>${esc(v.capacidad || '-')}${v.estado_documentos === 'vencido' ? '<br><span class="facturas-status fac-vencida">Documentos vencidos</span>' : v.estado_documentos === 'por_vencer' ? '<br><span class="facturas-status fac-proxima">Documentos por vencer</span>' : ''}</td>
           <td>${badgeEstado}</td>
           <td class="no-export" style="text-align: center; white-space: nowrap;">
-            <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${v.id}" title="Editar">
+            <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${esc(v.id)}" title="Editar">
               <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${v.id}" title="Eliminar">
+            <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${esc(v.id)}" title="Eliminar">
               <i class="bi bi-trash"></i>
             </button>
           </td>
@@ -207,12 +222,15 @@ export async function renderVehiculos(container) {
         if (res.success && res.data) {
           const v = res.data;
           document.getElementById('veh-id').value = v.id;
-          document.getElementById('modal-vehiculo-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Vehículo #${v.id}`;
+          document.getElementById('modal-vehiculo-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Vehículo #${esc(v.id)}`;
           document.getElementById('veh-placa').value = v.placa || '';
           document.getElementById('veh-modelo').value = v.modelo || '';
           document.getElementById('veh-tipo').value = v.tipo || '';
           document.getElementById('veh-capacidad').value = v.capacidad || '';
           document.getElementById('veh-estado').value = v.estado || 'activo';
+          document.getElementById('veh-capacidad-kg').value = v.capacidad_kg ?? '';
+          document.getElementById('veh-soat').value = v.soat_vencimiento || '';
+          document.getElementById('veh-revision').value = v.revision_vencimiento || '';
           modal.classList.add('show');
         }
       } catch (err) {
@@ -252,6 +270,9 @@ export async function renderVehiculos(container) {
       tipo: document.getElementById('veh-tipo').value.trim(),
       capacidad: document.getElementById('veh-capacidad').value.trim(),
       estado: document.getElementById('veh-estado').value,
+      capacidad_kg: document.getElementById('veh-capacidad-kg').value,
+      soat_vencimiento: document.getElementById('veh-soat').value,
+      revision_vencimiento: document.getElementById('veh-revision').value,
     };
 
     const btn = document.getElementById('btn-guardar-vehiculo');

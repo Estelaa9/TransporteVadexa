@@ -6,10 +6,10 @@
   <title>VADEXSA LOGISTIC — Sistema de Gestión de Transporte y Liquidaciones</title>
   
   <!-- Iconos y Tipografía -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
   
   <!-- Hoja de Estilos Empresarial -->
-  <link rel="stylesheet" href="css/app.css?v=20261112-2">
+  <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 
@@ -31,27 +31,8 @@
       <div class="sidebar-user-box">
         <div class="sidebar-user-avatar" id="sidebar-user-avatar">A</div>
         <div class="sidebar-user-info">
-          <span class="sidebar-user-name" id="sidebar-user-name">Administrador</span>
-          <span class="sidebar-user-role" id="sidebar-user-role">SISTEMA</span>
-        </div>
-      </div>
-
-      <!-- Widget Tipo de Cambio (exacto al diseño de la imagen) -->
-      <div class="sidebar-exchange-widget">
-        <div class="exchange-title">
-          <i class="bi bi-currency-exchange text-info"></i> Tipo de Cambio
-        </div>
-        <div class="exchange-row">
-          <span>Fecha:</span>
-          <span id="widget-exchange-date" style="font-weight:600; color:#fff;">--/--/----</span>
-        </div>
-        <div class="exchange-row">
-          <span>Compra:</span>
-          <span class="exchange-val">3.426</span>
-        </div>
-        <div class="exchange-row">
-          <span>Venta:</span>
-          <span class="exchange-val">3.435</span>
+          <span class="sidebar-user-name" id="sidebar-user-name"></span>
+          <span class="sidebar-user-role" id="sidebar-user-role"></span>
         </div>
       </div>
 
@@ -117,7 +98,7 @@
         <a href="#facturas" class="nav-item">
           <div class="nav-item-left">
             <i class="bi bi-receipt"></i>
-            <span>Facturas</span>
+            <span>Facturación</span>
           </div>
         </a>
         <a href="#gastos-operativos" class="nav-item">
@@ -141,8 +122,13 @@
           </div>
         </a>
 
+        <div class="nav-category">Gestión</div>
+        <a href="#analisis" class="nav-item"><div class="nav-item-left"><i class="bi bi-clipboard-data"></i><span>Análisis integral</span></div></a>
+        <a href="#auditoria" class="nav-item"><div class="nav-item-left"><i class="bi bi-shield-check"></i><span>Auditoría</span></div></a>
+
         <div class="nav-category">Cuenta</div>
-        <a href="#usuarios" class="nav-item"><div class="nav-item-left"><i class="bi bi-person-gear"></i><span>Administrar usuarios</span></div></a>
+        <a href="#usuarios" class="nav-item"><div class="nav-item-left"><i class="bi bi-person-gear"></i><span>Usuarios y roles</span></div></a>
+        <a href="#mi-cuenta" class="nav-item"><div class="nav-item-left"><i class="bi bi-key"></i><span>Mi cuenta</span></div></a>
         <a href="#logout" class="nav-item" style="color: #f87171;">
           <div class="nav-item-left">
             <i class="bi bi-box-arrow-right"></i>
@@ -170,12 +156,9 @@
         </div>
 
         <div class="topbar-right">
-          <div class="badge-venta">
-            <i class="bi bi-arrow-up-right-circle text-success"></i> VENTA: <strong>3.435</strong>
-          </div>
           <div class="topbar-user-badge">
             <i class="bi bi-person-circle text-primary" style="font-size: 16px;"></i>
-            <span id="topbar-user-name">SOPORTE</span>
+            <span id="topbar-user-name"></span>
           </div>
           <a href="#logout" class="btn-tms btn-tms-default" title="Cerrar sesión" style="padding: 4px 8px;">
             <i class="bi bi-power text-danger"></i>
@@ -195,7 +178,7 @@
   </div>
 
   <!-- CHATBOT ASISTENTE FLOTANTE -->
-  <div class="tms-chat-fab" id="tms-chat-fab" title="Asistente Virtual Vadexsa">
+  <div class="tms-chat-fab" id="tms-chat-fab" title="Asistente de consultas (basado en reglas)">
     <i class="bi bi-chat-dots-fill"></i>
   </div>
 
@@ -203,7 +186,7 @@
     <div class="chat-header">
       <div style="display: flex; align-items: center; gap: 8px;">
         <i class="bi bi-robot"></i>
-        <span>Asistente Inteligente VADEXSA</span>
+        <span>Asistente de consultas VADEXSA</span>
       </div>
       <button id="chat-close-btn" style="background: none; border: none; color: #fff; font-size: 18px; cursor: pointer;">&times;</button>
     </div>
@@ -213,6 +196,12 @@
       <button class="btn-pill-action chat-quick-chip" data-query="facturacion del mes" style="background: #10b981; font-size: 10px;">💰 Facturación</button>
       <button class="btn-pill-action chat-quick-chip" data-query="conductores disponibles hoy" style="background: #8b5cf6; font-size: 10px;">🧑‍✈️ Conductores</button>
       <button class="btn-pill-action chat-quick-chip" data-query="gastos del mes" style="background: #f59e0b; font-size: 10px;">⛽ Gastos</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="cuentas por cobrar" style="background: #ef4444; font-size: 10px;">💳 Por cobrar</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="servicios de mañana" style="background: #0ea5e9; font-size: 10px;">🗓️ Mañana</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="documentos por vencer" style="background: #f97316; font-size: 10px;">📄 Vencimientos</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="resultado del mes" style="background: #14b8a6; font-size: 10px;">📈 Resultado</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="diagnostico del mes" style="background: #6366f1; font-size: 10px;">🩺 Diagnóstico</button>
+      <button class="btn-pill-action chat-quick-chip" data-query="ayuda" style="background: #64748b; font-size: 10px;">❔ Ayuda</button>
     </div>
 
     <div class="chat-messages" id="chat-messages">
@@ -220,7 +209,7 @@
     </div>
 
     <form class="chat-input-row" id="chat-form">
-      <input type="text" id="chat-input" class="form-control-tms" placeholder="Pregunta sobre servicios, gastos, etc..." autocomplete="off">
+      <input type="text" id="chat-input" class="form-control-tms" placeholder="Ej.: servicios de hoy, cuentas por cobrar" autocomplete="off" maxlength="300">
       <button type="submit" class="btn-tms btn-tms-primary" style="padding: 6px 12px;">
         <i class="bi bi-send-fill"></i>
       </button>
@@ -232,15 +221,7 @@
 
   <!-- Scripts de la aplicación -->
   <script type="module">
-    import { initRouter } from './js/router.js?v=20261112-5';
-
-    // Formatear fecha actual en el widget de Tipo de Cambio
-    const today = new Date();
-    const dd = String(today.getDate()).padStart(2, '0');
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const yyyy = today.getFullYear();
-    const dateEl = document.getElementById('widget-exchange-date');
-    if (dateEl) dateEl.textContent = `${dd}/${mm}/${yyyy}`;
+    import { initRouter } from './js/router.js';
 
     // Inicializar SPA Router
     document.addEventListener('DOMContentLoaded', () => {

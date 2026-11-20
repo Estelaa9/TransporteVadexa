@@ -1,5 +1,5 @@
 // frontend/js/modules/gastos.js - Control de Gastos Operativos y Administrativos
-import { api, showToast, fmt, exportTableToExcel } from '../api.js';
+import { api, showToast, fmt, exportTableToExcel, esc, hoyISO } from '../api.js';
 
 export async function renderGastos(container, tipoInicial = 'operativos') {
   let currentTab = tipoInicial; // 'operativos' o 'administrativos'
@@ -139,10 +139,17 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
                 <input type="number" step="0.01" id="gop-monto" class="form-control-tms" placeholder="0.00" required style="font-weight: 700; color: #dc2626; border: 2px solid #e2e8f0; padding: 10px 14px; background: #fee2e2;">
               </div>
 
-              <div class="col-12 form-group">
+              <div class="col-8 form-group">
                 <label class="form-label" style="font-size: 12px; font-weight: 600;">Descripción / Detalle</label>
                 <input type="text" id="gop-descripcion" class="form-control-tms" placeholder="Detalle del gasto o estación de servicio" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
               </div>
+
+              <div class="col-4 form-group">
+                <label class="form-label" style="font-size: 12px; font-weight: 600;">N.° de servicio (opcional)</label>
+                <input type="number" min="1" id="gop-servicio" class="form-control-tms" placeholder="Para el margen por viaje" style="border: 2px solid #e2e8f0; padding: 10px 14px;">
+              </div>
+
+              <div class="col-12"><small class="muted">Registre los importes sin IGV. Si vincula el gasto a un servicio, se descuenta en el margen de ese viaje.</small></div>
 
             </div>
           </div>
@@ -249,7 +256,7 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
       vehiculosList = res.data || [];
       const sel = document.getElementById('gop-vehiculo');
       sel.innerHTML = '<option value="">Seleccione vehículo</option>' +
-        vehiculosList.map(v => `<option value="${v.id}">${v.placa} - ${v.modelo || v.tipo}</option>`).join('');
+        vehiculosList.map(v => `<option value="${esc(v.id)}">${esc(v.placa)} - ${esc(v.modelo || v.tipo)}</option>`).join('');
     } catch (e) {}
   }
 
@@ -288,7 +295,7 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
 
       const filtered = gastosList.filter(g => {
         if (!q) return true;
-        return `${g.id} ${g.fecha} ${g.placa} ${g.tipo} ${g.descripcion} ${g.monto}`.toLowerCase().includes(q);
+        return `${esc(g.id)} ${esc(g.fecha)} ${esc(g.placa)} ${esc(g.tipo)} ${esc(g.descripcion)} ${esc(g.monto)}`.toLowerCase().includes(q);
       });
 
       const total = filtered.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
@@ -302,15 +309,15 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
 
       tbody.innerHTML = filtered.map(g => `
         <tr>
-          <td><strong>#${g.id}</strong></td>
+          <td><strong>#${esc(g.id)}</strong></td>
           <td>${fmt.fecha(g.fecha)}</td>
-          <td><strong style="color: #1d4ed8;">${g.placa || 'Vehículo #' + g.vehiculo_id}</strong></td>
-          <td><span class="badge-status" style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3;">${g.tipo || '-'}</span></td>
-          <td>${g.descripcion || '-'}</td>
+          <td><strong style="color: #1d4ed8;">${esc(g.placa || 'Vehículo #' + g.vehiculo_id)}</strong></td>
+          <td><span class="badge-status" style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3;">${esc(g.tipo || '-')}</span></td>
+          <td>${esc(g.descripcion || '-')}</td>
           <td style="text-align: right; font-weight: 700; color: #dc2626;">${fmt.moneda(g.monto)}</td>
           <td class="no-export" style="text-align: center; white-space: nowrap;">
-            <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${g.id}" title="Editar"><i class="bi bi-pencil"></i></button>
-            <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${g.id}" title="Eliminar"><i class="bi bi-trash"></i></button>
+            <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${esc(g.id)}" title="Editar"><i class="bi bi-pencil"></i></button>
+            <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${esc(g.id)}" title="Eliminar"><i class="bi bi-trash"></i></button>
           </td>
         </tr>
       `).join('');
@@ -329,7 +336,7 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
 
       const filtered = gastosList.filter(g => {
         if (!q) return true;
-        return `${g.id} ${g.fecha} ${g.tipo} ${g.descripcion} ${g.monto}`.toLowerCase().includes(q);
+        return `${esc(g.id)} ${esc(g.fecha)} ${esc(g.tipo)} ${esc(g.descripcion)} ${esc(g.monto)}`.toLowerCase().includes(q);
       });
 
       const total = filtered.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
@@ -343,14 +350,14 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
 
       tbody.innerHTML = filtered.map(g => `
         <tr>
-          <td><strong>#${g.id}</strong></td>
+          <td><strong>#${esc(g.id)}</strong></td>
           <td>${fmt.fecha(g.fecha)}</td>
-          <td><span class="badge-status" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">${g.tipo || '-'}</span></td>
-          <td>${g.descripcion || '-'}</td>
+          <td><span class="badge-status" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">${esc(g.tipo || '-')}</span></td>
+          <td>${esc(g.descripcion || '-')}</td>
           <td style="text-align: right; font-weight: 700; color: #dc2626;">${fmt.moneda(g.monto)}</td>
           <td class="no-export" style="text-align: center; white-space: nowrap;">
-            <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${g.id}" title="Editar"><i class="bi bi-pencil"></i></button>
-            <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${g.id}" title="Eliminar"><i class="bi bi-trash"></i></button>
+            <button class="btn-pill-action btn-pill-edit" data-action="edit" data-id="${esc(g.id)}" title="Editar"><i class="bi bi-pencil"></i></button>
+            <button class="btn-pill-action btn-pill-delete" data-action="delete" data-id="${esc(g.id)}" title="Eliminar"><i class="bi bi-trash"></i></button>
           </td>
         </tr>
       `).join('');
@@ -374,16 +381,17 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
           const g = res.data;
           if (currentTab === 'operativos') {
             document.getElementById('gop-id').value = g.id;
-            document.getElementById('modal-gasto-op-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Gasto Operativo #${g.id}`;
+            document.getElementById('modal-gasto-op-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Gasto Operativo #${esc(g.id)}`;
             document.getElementById('gop-fecha').value = g.fecha || '';
             document.getElementById('gop-vehiculo').value = g.vehiculo_id || '';
             document.getElementById('gop-tipo').value = g.tipo || 'Combustible';
             document.getElementById('gop-descripcion').value = g.descripcion || '';
             document.getElementById('gop-monto').value = g.monto || '';
+            document.getElementById('gop-servicio').value = g.servicio_id || '';
             modalOp.classList.add('show');
           } else {
             document.getElementById('gad-id').value = g.id;
-            document.getElementById('modal-gasto-admin-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Gasto Administrativo #${g.id}`;
+            document.getElementById('modal-gasto-admin-titulo').innerHTML = `<i class="bi bi-pencil-square"></i> Editar Gasto Administrativo #${esc(g.id)}`;
             document.getElementById('gad-fecha').value = g.fecha || '';
             document.getElementById('gad-tipo').value = g.tipo || 'Sueldos';
             document.getElementById('gad-descripcion').value = g.descripcion || '';
@@ -414,13 +422,13 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
       formOp.reset();
       document.getElementById('gop-id').value = '';
       document.getElementById('modal-gasto-op-titulo').innerHTML = `<i class="bi bi-fuel-pump"></i> Registrar Gasto Operativo`;
-      document.getElementById('gop-fecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('gop-fecha').value = hoyISO();
       modalOp.classList.add('show');
     } else {
       formAdmin.reset();
       document.getElementById('gad-id').value = '';
       document.getElementById('modal-gasto-admin-titulo').innerHTML = `<i class="bi bi-building"></i> Registrar Gasto Administrativo`;
-      document.getElementById('gad-fecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('gad-fecha').value = hoyISO();
       modalAdmin.classList.add('show');
     }
   }
@@ -437,6 +445,7 @@ export async function renderGastos(container, tipoInicial = 'operativos') {
       tipo: document.getElementById('gop-tipo').value,
       descripcion: document.getElementById('gop-descripcion').value,
       monto: document.getElementById('gop-monto').value,
+      servicio_id: document.getElementById('gop-servicio').value,
     };
 
     const btn = document.getElementById('btn-guardar-gasto-op');
